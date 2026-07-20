@@ -226,7 +226,8 @@
   .legend-row b{color:var(--text-primary);margin-left:auto;padding-left:16px;font-size:14px;}
   .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
   .bd-bar-row{display:grid;grid-template-columns:130px 1fr 26px;align-items:center;gap:10px;padding:7px 0;}
-  .bd-bar-label{font-family:var(--sans);font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bd-bar-label{font-family:var(--sans);font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;}
+  .bd-swatch{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
   .bd-bar-track{background:var(--ink-800);border-radius:5px;height:9px;overflow:hidden;}
   .bd-bar-fill{height:100%;border-radius:5px;min-width:4px;transition:width .3s;}
   .bd-bar-count{font-family:var(--mono);font-size:12px;color:var(--text-muted);text-align:right;}
@@ -266,6 +267,9 @@
   .modal h3{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin:18px 0 8px;}
   .typelist{display:flex;flex-direction:column;gap:6px;}
   .typerow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--ink-800);border:1px solid var(--line);border-radius:6px;padding:6px 8px;}
+  .type-color{width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:5px;cursor:pointer;background:none;flex-shrink:0;}
+  .type-color::-webkit-color-swatch-wrapper{padding:2px;}
+  .type-color::-webkit-color-swatch{border:none;border-radius:3px;}
   .typerow input[type=text]{flex:1;}
   .typerow label{font-family:var(--mono);font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;white-space:nowrap;}
   .typerow button{background:none;border:none;color:var(--mali);cursor:pointer;font-size:14px;padding:2px 6px;}
@@ -346,6 +350,10 @@
       <input type="text" id="newAddressLabel" placeholder="Nom (ex: Domicile)" style="flex:1;min-width:110px;">
       <input type="text" id="newAddressValue" placeholder="Adresse complète" style="flex:2;min-width:180px;">
       <button onclick="addAddress()">Ajouter</button>
+    </div>
+    <h3>Calendrier de l'année</h3>
+    <div class="modal-actions" style="margin-top:0;">
+      <button class="settingsbtn" onclick="openYearCalModal()">📅 Générer / appliquer le calendrier de l'année</button>
     </div>
     <h3>Connexion GitHub (synchronisation)</h3>
     <div id="ghConnInfo" style="font-family:var(--mono);font-size:11.5px;color:var(--text-muted);"></div>
@@ -468,6 +476,41 @@
   </div>
 </div>
 
+<div class="overlay" id="yearCalOverlay">
+  <div class="modal" style="max-width:680px;">
+    <h2>📅 Calendrier de l'année</h2>
+
+    <div class="schedule-fields" style="grid-template-columns:auto auto;align-items:end;">
+      <div><label>Année</label><input type="number" id="ycYear" value="2026" style="width:110px;"></div>
+      <div><button class="settingsbtn" onclick="generateHolidaysForYear()">Générer les jours fériés</button></div>
+    </div>
+
+    <h3>Jours fériés légaux (calculés automatiquement)</h3>
+    <div class="typelist" id="ycHolidaysList"></div>
+
+    <h3>Dispenses / congés réglementaires / congés de compensation</h3>
+    <p style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);margin:0 0 8px;">
+      Ces dates sont propres à ton administration (communiquées chaque année) — non calculables automatiquement.
+    </p>
+    <div class="typelist" id="ycExtraList"></div>
+    <div class="addrow" style="flex-wrap:wrap;">
+      <input type="date" id="ycNewDate" style="flex:1;min-width:130px;">
+      <select id="ycNewCategory" style="flex:1;min-width:150px;">
+        <option value="dispense">Dispense de service</option>
+        <option value="conge_reg">Congé réglementaire</option>
+        <option value="conge_comp">Congé de compensation</option>
+      </select>
+      <input type="text" id="ycNewLabel" placeholder="Libellé (facultatif)" style="flex:1;min-width:120px;">
+      <button onclick="addYearCalRow()">Ajouter</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="closebtn" onclick="closeYearCalModal()">Annuler</button>
+      <button class="primarybtn" onclick="applyYearCalendar()">Appliquer au calendrier</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -478,30 +521,30 @@ const DEFAULT_SCHEDULE = { start1:"08:10", end1:"12:00", start2:"12:30", end2:"1
 const BREAK_MIN       = 30;               // pause obligatoire
 
 const DEFAULT_PRESENCE_TYPES = [
-  { id:"cpm",                label:"CPM" },
-  { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target" },
-  { id:"formation",          label:"Formation",   travelLog:true },
-  { id:"mission",            label:"Mission",     travelLog:true },
-  { id:"mission_cpm",        label:"Mission + CPM",         travelLog:true },
-  { id:"mission_teletravail",label:"Mission + Télétravail", travelLog:true },
-  { id:"teambuilding",       label:"Teambuilding" },
-  { id:"cpm_niv2",           label:"CPM - Niv2",  afternoonEndOverride:"15:16" },
-  { id:"cpm_niv2plus",       label:"CPM - Niv2+", afternoonEndOverride:"14:16" },
+  { id:"cpm",                label:"CPM",                    color:"#1F7A72" },
+  { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target", color:"#2B8CA8" },
+  { id:"formation",          label:"Formation",   travelLog:true, color:"#6A4C93" },
+  { id:"mission",            label:"Mission",     travelLog:true, color:"#2E5C8A" },
+  { id:"mission_cpm",        label:"Mission + CPM",         travelLog:true, color:"#4A7BAE" },
+  { id:"mission_teletravail",label:"Mission + Télétravail", travelLog:true, color:"#7098C4" },
+  { id:"teambuilding",       label:"Teambuilding", color:"#B5568C" },
+  { id:"cpm_niv2",           label:"CPM - Niv2",  afternoonEndOverride:"15:16", color:"#3F9690" },
+  { id:"cpm_niv2plus",       label:"CPM - Niv2+", afternoonEndOverride:"14:16", color:"#6BB3AE" },
 ];
 const DEFAULT_ABSENCE_TYPES = [
-  { id:"maladie",     label:"Maladie",                   sick:true },
-  { id:"circonstance",label:"Circonstance" },
-  { id:"dispense",    label:"Dispense de service",       excludeFromOuvres:true },
-  { id:"dispense_med",label:"Dispense médicale" },
-  { id:"dispense_syn",label:"Dispense syndicale" },
-  { id:"ferie",       label:"Jour férié",                excludeFromOuvres:true },
-  { id:"conge",       label:"Congé" },
-  { id:"conge_comp",  label:"Congé de compensation" },
-  { id:"conge_reg",   label:"Congé réglementaire" },
-  { id:"recup",       label:"Récupération en heures",    fullDayMali:true },
+  { id:"maladie",     label:"Maladie",                   sick:true, color:"#B23A22" },
+  { id:"circonstance",label:"Circonstance", color:"#6B6459" },
+  { id:"dispense",    label:"Dispense de service",       excludeFromOuvres:true, color:"#A64B2A" },
+  { id:"dispense_med",label:"Dispense médicale", color:"#C06B4B" },
+  { id:"dispense_syn",label:"Dispense syndicale", color:"#D68F73" },
+  { id:"ferie",       label:"Jour férié",                excludeFromOuvres:true, color:"#4F7942" },
+  { id:"conge",       label:"Congé", color:"#95580B" },
+  { id:"conge_comp",  label:"Congé de compensation",     excludeFromOuvres:true, color:"#B8792F" },
+  { id:"conge_reg",   label:"Congé réglementaire",       excludeFromOuvres:true, color:"#D4A15E" },
+  { id:"recup",       label:"Récupération en heures",    fullDayMali:true, color:"#8B3A62" },
 ];
 const MONTHLY_FORFAIT_MIN = 6*60; // 6h "sport/Culture" ajoutées chaque mois, au prorata si maladie
-const CONFIG_VERSION = 6;
+const CONFIG_VERSION = 8;
 
 
 const DOW_NAMES = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -535,6 +578,55 @@ function fmtDur(min){
   return `${h}h${String(m).padStart(2,"0")}`;
 }
 function pad(n){return String(n).padStart(2,"0");}
+
+/* ============================================================
+   CALENDRIER ANNUEL — jours fériés belges (calculés) + dates FWB (saisies)
+   ============================================================ */
+function computeEaster(year){
+  // Algorithme de Meeus/Jones/Butcher (calendrier grégorien)
+  const a = year % 19, b = Math.floor(year/100), c = year % 100;
+  const d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25);
+  const g = Math.floor((b-f+1)/3), h = (19*a + b - d - g + 15) % 30;
+  const i = Math.floor(c/4), k = c % 4;
+  const l = (32 + 2*e + 2*i - h - k) % 7;
+  const m = Math.floor((a + 11*h + 22*l)/451);
+  const month = Math.floor((h + l - 7*m + 114)/31);
+  const day = ((h + l - 7*m + 114) % 31) + 1;
+  return new Date(year, month-1, day);
+}
+function ycAddDays(date, n){ const d = new Date(date); d.setDate(d.getDate()+n); return d; }
+function ycISO(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function computeBelgianHolidays(year){
+  const easter = computeEaster(year);
+  const list = [
+    { label:"Nouvel An",         date: new Date(year,0,1) },
+    { label:"Pâques",            date: easter },
+    { label:"Lundi de Pâques",   date: ycAddDays(easter,1) },
+    { label:"Fête du Travail",   date: new Date(year,4,1) },
+    { label:"Ascension",         date: ycAddDays(easter,39) },
+    { label:"Pentecôte",         date: ycAddDays(easter,50) },
+    { label:"Fête Nationale",    date: new Date(year,6,21) },
+    { label:"Assomption",        date: new Date(year,7,15) },
+    { label:"Toussaint",         date: new Date(year,10,1) },
+    { label:"Armistice",         date: new Date(year,10,11) },
+    { label:"Noël",              date: new Date(year,11,25) },
+  ];
+  return list.map(x=>({ label:x.label, date: ycISO(x.date) })).sort((a,b)=>a.date.localeCompare(b.date));
+}
+// Dates propres à la FWB pour 2026, non calculables (communiquées chaque année) — issues du tableau fourni
+const KNOWN_2026_EXTRA = [
+  { date:"2026-01-02", typeId:"dispense",  label:"Dispense" },
+  { date:"2026-05-15", typeId:"dispense",  label:"Dispense" },
+  { date:"2026-07-20", typeId:"dispense",  label:"Dispense" },
+  { date:"2026-09-27", typeId:"conge_reg", label:"Congé réglementaire" },
+  { date:"2026-11-02", typeId:"conge_reg", label:"Congé réglementaire" },
+  { date:"2026-11-15", typeId:"conge_reg", label:"Congé réglementaire" },
+  { date:"2026-12-28", typeId:"conge_comp",label:"Congé de compensation" },
+  { date:"2026-12-29", typeId:"conge_comp",label:"Congé de compensation" },
+  { date:"2026-12-30", typeId:"conge_comp",label:"Congé de compensation" },
+  { date:"2026-12-31", typeId:"conge_comp",label:"Congé de compensation" },
+];
+
 function monthKey(y,m){return `${y}-${pad(m+1)}`;}
 function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
 
@@ -774,6 +866,22 @@ async function loadConfig(){
         { id:"fwb",      label:"FWB",         address:"Boulevard Léopold II 44, 1080 Molenbeek-Saint-Jean" },
       ];
     }
+
+    // congé réglementaire / congé de compensation : jours non ouvrés (cohérent avec le calendrier officiel),
+    // uniquement si le réglage n'a jamais été touché manuellement
+    absenceTypes.forEach(t=>{
+      if((t.id==="conge_reg"||t.id==="conge_comp") && t.excludeFromOuvres===undefined) t.excludeFromOuvres = true;
+    });
+
+    // couleurs par famille de type (uniquement pour les types déjà connus, sans écraser une couleur déjà choisie)
+    const DEFAULT_COLORS = {};
+    DEFAULT_PRESENCE_TYPES.forEach(t=>{ DEFAULT_COLORS[t.id] = t.color; });
+    DEFAULT_ABSENCE_TYPES.forEach(t=>{ DEFAULT_COLORS[t.id] = t.color; });
+    presenceTypes.forEach(t=>{ if(!t.color && DEFAULT_COLORS[t.id]) t.color = DEFAULT_COLORS[t.id]; });
+    absenceTypes.forEach(t=>{ if(!t.color && DEFAULT_COLORS[t.id]) t.color = DEFAULT_COLORS[t.id]; });
+    // types personnalisés sans couleur connue : couleur de secours neutre selon la famille
+    presenceTypes.forEach(t=>{ if(!t.color) t.color = "#1F7A72"; });
+    absenceTypes.forEach(t=>{ if(!t.color) t.color = "#95580B"; });
   }
   if(!addresses) addresses = [];
 
@@ -951,16 +1059,20 @@ function labelFor(kind, typeId){
   const t = list.find(x=>x.id===typeId);
   return t ? t.label : typeId;
 }
+function typeColorFor(kind, id){
+  const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
+  const t = list.find(x=>x.id===id);
+  return (t && t.color) || (kind==="presence" ? "#1F7A72" : "#95580B");
+}
 function breakdownBarsHtml(counts, kind){
-  const entries = Object.keys(counts).map(id=>({id, label:labelFor(kind,id), n:counts[id]}));
+  const entries = Object.keys(counts).map(id=>({id, label:labelFor(kind,id), n:counts[id], color:typeColorFor(kind,id)}));
   entries.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   if(!entries.length) return `<div class="bd-empty">—</div>`;
   const max = Math.max(...entries.map(e=>e.n));
-  const color = kind==="presence" ? "var(--teal)" : "var(--amber)";
   return entries.map(e=>`
     <div class="bd-bar-row">
-      <div class="bd-bar-label" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</div>
-      <div class="bd-bar-track"><div class="bd-bar-fill" style="width:${Math.max(4,Math.round(e.n/max*100))}%;background:${color};"></div></div>
+      <div class="bd-bar-label" title="${escapeHtml(e.label)}"><span class="bd-swatch" style="background:${e.color};"></span>${escapeHtml(e.label)}</div>
+      <div class="bd-bar-track"><div class="bd-bar-fill" style="width:${Math.max(4,Math.round(e.n/max*100))}%;background:${e.color};"></div></div>
       <div class="bd-bar-count">${e.n}</div>
     </div>`).join("");
 }
@@ -1048,11 +1160,18 @@ async function render(){
     const dow = new Date(y,m-1,d).getDay();
     const dateStr = `${currentMonthKey}-${pad(d)}`;
     const entry = monthData.days[dateStr];
-    let s = "empty";
+    let s = "empty", style = "";
     if(dow===0||dow===6) s="weekend";
-    else if(entry && entry.kind==="presence") s="presence";
-    else if(entry && entry.kind==="absence") s="absence";
-    dots += `<div class="pd" data-s="${s}" title="${d}"></div>`;
+    else if(entry && entry.kind==="presence"){
+      s="presence";
+      const t = CONFIG.presenceTypes.find(x=>x.id===entry.typeId);
+      if(t && t.color) style = `background:${t.color};border-color:${t.color};`;
+    } else if(entry && entry.kind==="absence"){
+      s="absence";
+      const t = CONFIG.absenceTypes.find(x=>x.id===entry.typeId);
+      if(t && t.color) style = `background:${t.color}33;border-color:${t.color};`;
+    }
+    dots += `<div class="pd" data-s="${s}" style="${style}" title="${d}"></div>`;
   }
 
   const totalClass = summary.total>0?"boni":(summary.total<0?"mali":"zero");
@@ -1127,7 +1246,10 @@ async function render(){
       }
       bodyCell = `
         <td>
-          <select onchange="changeType('${dateStr}', this.value)">${typeOptionsHtml(entry)}</select>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${entry && entry.kind ? `<span class="bd-swatch" style="width:10px;height:10px;background:${typeColorFor(entry.kind, entry.typeId)};flex-shrink:0;"></span>` : ""}
+            <select onchange="changeType('${dateStr}', this.value)">${typeOptionsHtml(entry)}</select>
+          </div>
         </td>
         <td>${detail}</td>`;
     }
@@ -1762,6 +1884,99 @@ async function clearTravelData(){
   showToast("Déplacement effacé");
 }
 
+/* ============================================================
+   CALENDRIER DE L'ANNÉE — modale (état + rendu + application)
+   ============================================================ */
+let YC_HOLIDAYS = [];
+let YC_EXTRA = [];
+
+function openYearCalModal(){
+  document.getElementById("ycYear").value = 2026;
+  YC_EXTRA = [];
+  generateHolidaysForYear();
+  document.getElementById("yearCalOverlay").classList.add("show");
+}
+function closeYearCalModal(){
+  document.getElementById("yearCalOverlay").classList.remove("show");
+}
+function generateHolidaysForYear(){
+  const year = parseInt(document.getElementById("ycYear").value, 10) || new Date().getFullYear();
+  YC_HOLIDAYS = computeBelgianHolidays(year);
+  renderYcHolidays();
+  if(year === 2026 && YC_EXTRA.length === 0){
+    YC_EXTRA = KNOWN_2026_EXTRA.map(x=>({...x}));
+  }
+  renderYcExtra();
+}
+function renderYcHolidays(){
+  document.getElementById("ycHolidaysList").innerHTML = YC_HOLIDAYS.map((h,i)=>`
+    <div class="typerow">
+      <input type="text" value="${escapeHtml(h.label)}" onchange="YC_HOLIDAYS[${i}].label=this.value">
+      <input type="date" value="${h.date}" onchange="YC_HOLIDAYS[${i}].date=this.value">
+      <button onclick="removeYcHoliday(${i})" title="Retirer">✕</button>
+    </div>`).join("");
+}
+function removeYcHoliday(i){ YC_HOLIDAYS.splice(i,1); renderYcHolidays(); }
+function renderYcExtra(){
+  const el = document.getElementById("ycExtraList");
+  el.innerHTML = YC_EXTRA.length ? YC_EXTRA.map((e,i)=>`
+    <div class="typerow">
+      <input type="date" value="${e.date}" onchange="YC_EXTRA[${i}].date=this.value">
+      <select onchange="YC_EXTRA[${i}].typeId=this.value">
+        <option value="dispense" ${e.typeId==='dispense'?'selected':''}>Dispense de service</option>
+        <option value="conge_reg" ${e.typeId==='conge_reg'?'selected':''}>Congé réglementaire</option>
+        <option value="conge_comp" ${e.typeId==='conge_comp'?'selected':''}>Congé de compensation</option>
+      </select>
+      <input type="text" value="${escapeHtml(e.label||'')}" placeholder="Libellé" onchange="YC_EXTRA[${i}].label=this.value">
+      <button onclick="removeYcExtra(${i})" title="Retirer">✕</button>
+    </div>`).join("") : `<div class="bd-empty">Aucune date ajoutée.</div>`;
+}
+function removeYcExtra(i){ YC_EXTRA.splice(i,1); renderYcExtra(); }
+function addYearCalRow(){
+  const date = document.getElementById("ycNewDate").value;
+  const typeId = document.getElementById("ycNewCategory").value;
+  const label = document.getElementById("ycNewLabel").value.trim();
+  if(!date) return;
+  YC_EXTRA.push({ date, typeId, label });
+  document.getElementById("ycNewDate").value = "";
+  document.getElementById("ycNewLabel").value = "";
+  renderYcExtra();
+}
+
+async function applyYearCalendar(){
+  const events = [];
+  YC_HOLIDAYS.forEach(h => events.push({ date:h.date, typeId:"ferie", label:h.label }));
+  YC_EXTRA.forEach(e => events.push({ date:e.date, typeId:e.typeId, label:e.label }));
+
+  const byMonth = {};
+  let weekendSkipped = 0;
+  events.forEach(ev=>{
+    const [y,m,d] = ev.date.split("-").map(Number);
+    if(!y || !m || !d) return;
+    const dow = new Date(y, m-1, d).getDay();
+    if(dow===0 || dow===6){ weekendSkipped++; return; } // déjà hors calcul, inutile de l'encoder
+    const mk = ev.date.slice(0,7);
+    (byMonth[mk] = byMonth[mk] || []).push(ev);
+  });
+
+  let applied = 0, skipped = 0;
+  for(const mk of Object.keys(byMonth)){
+    const isCurrent = (mk === currentMonthKey);
+    const data = isCurrent ? monthData : await loadMonth(mk);
+    byMonth[mk].forEach(ev=>{
+      if(data.days[ev.date]){ skipped++; return; }
+      data.days[ev.date] = { kind:"absence", typeId: ev.typeId, note: ev.label || "" };
+      applied++;
+    });
+    await storageSet(`horaire-month:${mk}`, JSON.stringify(data));
+  }
+
+  closeYearCalModal();
+  const extra = skipped ? `, ${skipped} déjà renseigné(s) ignoré(s)` : "";
+  showToast(`Calendrier appliqué : ${applied} jour(s) ajouté(s)${extra}`);
+  await render();
+}
+
 async function clearMonth(){
   if(!confirm(`Vider toutes les données de ${currentMonthKey} ? Cette action est irréversible.`)) return;
   monthData = { days:{} };
@@ -1786,6 +2001,7 @@ function renderTypeList(containerId, list, kind){
   const display = sortedByLabel(list);
   el.innerHTML = display.map(t=>`
     <div class="typerow">
+      <input type="color" value="${t.color||'#95580B'}" class="type-color" title="Couleur" onchange="editTypeColor('${t.id}','${kind}',this.value)">
       <input type="text" value="${escapeHtml(t.label)}" onchange="editTypeLabel('${kind}','${t.id}',this.value)">
       ${kind==='absence' ? `
         <label><input type="checkbox" ${t.sick?'checked':''} onchange="editTypeFlag('${t.id}','sick',this.checked)"> maladie</label>
@@ -1798,6 +2014,11 @@ function renderTypeList(containerId, list, kind){
       <button onclick="removeType('${kind}','${t.id}')" title="Supprimer">✕</button>
     </div>
   `).join("");
+}
+function editTypeColor(id, kind, value){
+  const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
+  const t = list.find(x=>x.id===id);
+  if(t) t.color = value;
 }
 
 function openSettings(){
@@ -1870,7 +2091,9 @@ function addType(kind){
   const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
   let id = slugify(label);
   if(list.some(t=>t.id===id)) id = id + "_" + Date.now().toString(36);
-  const entry = { id, label };
+  const fallbackPalette = ["#1F7A72","#2E5C8A","#6A4C93","#B5568C","#95580B","#A64B2A","#4F7942","#8B3A62"];
+  const color = fallbackPalette[list.length % fallbackPalette.length];
+  const entry = { id, label, color };
   if(kind==="absence") { entry.sick = false; entry.excludeFromOuvres = false; entry.fullDayMali = false; }
   list.push(entry);
   input.value = "";
