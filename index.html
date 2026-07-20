@@ -4,29 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carnet de pointage</title>
-<meta name="theme-color" content="#0C1417">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="description" content="Encodage et suivi des horaires — boni/mali, jours ouvrés, dashboard.">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icons/icon-512.png" sizes="512x512" type="image/png">
 <link rel="apple-touch-icon" href="./icons/icon-512.png">
 <style>
   :root{
-    --ink-950:#0C1417;
-    --ink-900:#121D22;
-    --ink-800:#182731;
-    --ink-700:#22343F;
-    --line:#2C4048;
-    --paper:#ECE7DA;
-    --text-primary:#E9E5D8;
-    --text-muted:#8CA2A8;
-    --text-faint:#5B6E73;
-    --amber:#E8A33D;
-    --amber-dim:#7A5B27;
-    --teal:#4FA3A3;
-    --boni:#7FBE8F;
-    --boni-dim:#2C3B2F;
-    --mali:#D2694F;
-    --mali-dim:#3E2A24;
+    --ink-950:#FFFFFF;
+    --ink-900:#FAFAF8;
+    --ink-800:#F1EFEA;
+    --ink-700:#E7E4DC;
+    --line:#DEDAD1;
+    --paper:#FFFFFF;
+    --text-primary:#201C16;
+    --text-muted:#6B6459;
+    --text-faint:#847A6D;
+    --amber:#95580B;
+    --amber-dim:#F3DDB8;
+    --teal:#1F7A72;
+    --boni:#2E8B4F;
+    --boni-dim:#DCF0E1;
+    --mali:#B23A22;
+    --mali-dim:#FBE1DA;
     --radius:10px;
     --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
     --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
@@ -58,7 +58,7 @@
   .cardhead::before{
     content:"";
     position:absolute; inset:0;
-    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 34px);
+    background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.025) 0 1px, transparent 1px 34px);
     pointer-events:none;
   }
   .cardhead-top{
@@ -68,6 +68,7 @@
     font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
     color:var(--text-muted); display:flex; align-items:center; gap:8px;
   }
+  .eyebrow.caserespect{ text-transform:none; letter-spacing:.04em; font-size:12px; }
   .dot{width:7px;height:7px;border-radius:50%;background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 2.4s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
   @media (prefers-reduced-motion: reduce){.dot{animation:none;}}
@@ -134,9 +135,9 @@
   }
   tbody tr{border-bottom:1px solid var(--line);}
   tbody tr:last-child{border-bottom:none;}
-  tbody tr.weekend{background:rgba(255,255,255,0.012);}
+  tbody tr.weekend{background:rgba(0,0,0,0.02);}
   tbody tr.today{background:rgba(232,163,61,0.05);}
-  tbody tr.unfilled td.deltacell{box-shadow: inset 3px 0 0 var(--amber-dim);}
+  tbody tr.unfilled td.deltacell{box-shadow: inset 3px 0 0 var(--amber);}
   td{padding:9px 10px;vertical-align:middle;font-size:13px;}
   .daycell{font-family:var(--mono);white-space:nowrap;}
   .daynum{font-weight:600;}
@@ -193,7 +194,28 @@
   .bd-row:last-child{border-bottom:none;}
   .bd-count{font-family:var(--mono);color:var(--teal);}
   .bd-empty{font-family:var(--mono);font-size:11.5px;color:var(--text-faint);}
+
+  .dash-visual{display:flex;gap:32px;align-items:center;flex-wrap:wrap;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--line);}
+  .donut-wrap{position:relative;width:148px;height:148px;flex-shrink:0;}
+  .donut-wrap svg{display:block;transition:all .3s;}
+  .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  .donut-num{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--text-primary);line-height:1;}
+  .donut-lbl{font-family:var(--mono);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
+  .donut-legend{display:flex;flex-direction:column;gap:9px;min-width:200px;}
+  .legend-row{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12.5px;color:var(--text-muted);}
+  .legend-row b{color:var(--text-primary);margin-left:auto;padding-left:16px;font-size:14px;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  .bd-bar-row{display:grid;grid-template-columns:130px 1fr 26px;align-items:center;gap:10px;padding:7px 0;}
+  .bd-bar-label{font-family:var(--sans);font-size:12px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bd-bar-track{background:var(--ink-800);border-radius:5px;height:9px;overflow:hidden;}
+  .bd-bar-fill{height:100%;border-radius:5px;min-width:4px;transition:width .3s;}
+  .bd-bar-count{font-family:var(--mono);font-size:12px;color:var(--text-muted);text-align:right;}
+  @media(max-width:640px){ .dash-visual{flex-direction:column;align-items:flex-start;} .bd-bar-row{grid-template-columns:100px 1fr 24px;} }
   @media(max-width:640px){ .dash-breakdown{grid-template-columns:1fr;} }
+  .bd-ticket-row{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 10px;background:var(--boni-dim);border:1px solid var(--boni);border-radius:7px;font-family:var(--sans);font-size:12.5px;color:var(--text-primary);}
+  .bd-ticket-row span{flex:1;}
+  .bd-ticket-row b{font-family:var(--mono);color:var(--boni);font-size:13px;}
+  .dash-note{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);margin-top:12px;line-height:1.5;}
 
   /* ---------- Footer controls ---------- */
   .footerbar{display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:10px;}
@@ -207,6 +229,8 @@
     font-family:var(--mono);font-size:11.5px;padding:8px 14px;border-radius:7px;cursor:pointer;
   }
   .settingsbtn:hover{border-color:var(--teal);}
+  .settingsbtn.primaryish{background:var(--boni-dim);border-color:var(--boni);color:var(--boni);font-weight:600;}
+  .settingsbtn.primaryish:hover{background:var(--boni);color:var(--ink-950);}
 
   /* ---------- Modal ---------- */
   .overlay{
@@ -322,7 +346,7 @@ const BREAK_MIN       = 30;               // pause obligatoire
 
 const DEFAULT_PRESENCE_TYPES = [
   { id:"cpm",                label:"CPM" },
-  { id:"teletravail",        label:"Télétravail" },
+  { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target" },
   { id:"formation",          label:"Formation" },
   { id:"mission",            label:"Mission" },
   { id:"mission_cpm",        label:"Mission + CPM" },
@@ -344,7 +368,7 @@ const DEFAULT_ABSENCE_TYPES = [
   { id:"recup",       label:"Récupération en heures",    fullDayMali:true },
 ];
 const MONTHLY_FORFAIT_MIN = 6*60; // 6h "sport/Culture" ajoutées chaque mois, au prorata si maladie
-const CONFIG_VERSION = 3;
+const CONFIG_VERSION = 4;
 
 
 const DOW_NAMES = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -433,6 +457,15 @@ function balanceInWords(totalMin){
   if(totalMin>0) return "Boni de " + words;
   if(totalMin<0) return "Mali de " + words;
   return "Solde équilibré — zéro heure";
+}
+function balanceInDaysFormat(totalMin){
+  const sign = totalMin>0 ? "+" : (totalMin<0 ? "−" : "");
+  const abs = Math.abs(Math.round(totalMin));
+  const dayMin = dayTargetMin(); // durée d'une journée type (7h36 par défaut)
+  const jours = Math.floor(abs/dayMin);
+  const rest = abs - jours*dayMin;
+  const h = Math.floor(rest/60), m = rest%60;
+  return `${sign} [${jours} Jour(s) ${h} H ${String(m).padStart(2,"0")} Min]`;
 }
 
 /* ============================================================
@@ -589,6 +622,9 @@ async function loadConfig(){
     if(!openingBalance){
       openingBalance = { minutes: 256*60+43, asOf:"2026-06" };
     }
+
+    // télétravail : les heures sup. se comptent sur le total journalier (au-delà de 7h36), pas sur des heures d'horloge
+    presenceTypes.forEach(t=>{ if(t.id==="teletravail" && !t.overtimeMode) t.overtimeMode = "daily-target"; });
   }
 
   CONFIG = { presenceTypes, absenceTypes, schedule, openingBalance, version: CONFIG_VERSION };
@@ -639,11 +675,26 @@ function computeDay(entry){
   // migration / valeurs par défaut pour les entrées existantes
   const beforeMode = entry.beforeMode || (entry.before810 ? "simple" : "none");
   const otMode = entry.otMode || (entry.doubleOT ? "double" : "none");
+  const presenceTypeDef = CONFIG.presenceTypes.find(t=>t.id===entry.typeId);
+
+  // ---- mode "total journalier" (ex : Télétravail) : le seuil de dépassement est le total
+  // de la journée (7h36), pas des heures d'horloge précises comme 8h10 / 16h16.
+  if(presenceTypeDef && presenceTypeDef.overtimeMode === "daily-target"){
+    const minResume = e1 + BREAK_MIN;
+    const breakWarn = (s2 - e1) < BREAK_MIN;
+    const effStart2 = Math.max(s2, minResume);
+    const rawMin = Math.max(0, e1 - s1) + Math.max(0, e2 - effStart2);
+    const targetMin = (toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1)) + (toMin(CONFIG.schedule.end2)-toMin(CONFIG.schedule.start2));
+    const excess = Math.max(0, rawMin - targetMin);
+    const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
+    const workedMin = rawMin > targetMin ? targetMin + excess*otFactor : rawMin;
+    const deltaMin = workedMin - targetMin;
+    return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin:excess, targetMin, otMode, dailyTargetMode:true, rawMin };
+  }
 
   // seuils dynamiques : basés sur l'horaire configuré, avec override éventuel du type de présence
   // (ex : "CPM - Niv2" termine à 15h16 sans mali, "CPM - Niv2+" à 14h16)
   const dayStartFloor = toMin(CONFIG.schedule.start1);
-  const presenceTypeDef = CONFIG.presenceTypes.find(t=>t.id===entry.typeId);
   const otThreshold = (presenceTypeDef && presenceTypeDef.afternoonEndOverride)
     ? toMin(presenceTypeDef.afternoonEndOverride)
     : toMin(CONFIG.schedule.end2);
@@ -682,7 +733,7 @@ function dayTargetMin(){
    ============================================================ */
 function computeStatsForMonth(data, key){
   const [y,m] = key.split("-").map(Number);
-  if(!y||!m) return { joursOuvres:0, joursMaladie:0, joursRenseignes:0, sommeDelta:0, boniSum:0, maliSum:0, forfait:0, total:0, ratio:1 };
+  if(!y||!m) return { joursOuvres:0, joursMaladie:0, joursRenseignes:0, sommeDelta:0, boniSum:0, maliSum:0, forfait:0, forfaitEstime:0, moisComplet:false, total:0, ratio:1 };
   const nDays = daysInMonth(y, m-1);
   let joursOuvres = 0, joursMaladie = 0, joursRenseignes = 0, sommeDelta = 0, boniSum = 0, maliSum = 0;
 
@@ -706,10 +757,14 @@ function computeStatsForMonth(data, key){
   }
 
   const ratio = joursOuvres>0 ? (joursOuvres-joursMaladie)/joursOuvres : 1;
-  const forfait = Math.round(MONTHLY_FORFAIT_MIN * ratio);
+  const forfaitEstime = Math.round(MONTHLY_FORFAIT_MIN * ratio);
+  // les heures sport/Culture ne sont créditées qu'une fois TOUS les jours ouvrés du mois renseignés
+  // (comme dans le processus manuel : on ne les ajoute qu'à la clôture du mois, jamais en cours de route)
+  const moisComplet = joursOuvres>0 && joursRenseignes===joursOuvres;
+  const forfait = moisComplet ? forfaitEstime : 0;
   const total = sommeDelta + forfait;
 
-  return { joursOuvres, joursMaladie, joursRenseignes, sommeDelta, boniSum, maliSum, forfait, total, ratio };
+  return { joursOuvres, joursMaladie, joursRenseignes, sommeDelta, boniSum, maliSum, forfait, forfaitEstime, moisComplet, total, ratio };
 }
 
 /* ============================================================
@@ -746,11 +801,32 @@ function labelFor(kind, typeId){
   const t = list.find(x=>x.id===typeId);
   return t ? t.label : typeId;
 }
-function breakdownRowsHtml(counts, kind){
+function breakdownBarsHtml(counts, kind){
   const entries = Object.keys(counts).map(id=>({id, label:labelFor(kind,id), n:counts[id]}));
   entries.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   if(!entries.length) return `<div class="bd-empty">—</div>`;
-  return entries.map(e=>`<div class="bd-row"><span>${escapeHtml(e.label)}</span><span class="bd-count">${e.n} j.</span></div>`).join("");
+  const max = Math.max(...entries.map(e=>e.n));
+  const color = kind==="presence" ? "var(--teal)" : "var(--amber)";
+  return entries.map(e=>`
+    <div class="bd-bar-row">
+      <div class="bd-bar-label" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</div>
+      <div class="bd-bar-track"><div class="bd-bar-fill" style="width:${Math.max(4,Math.round(e.n/max*100))}%;background:${color};"></div></div>
+      <div class="bd-bar-count">${e.n}</div>
+    </div>`).join("");
+}
+function donutSvg(segments, size){
+  size = size || 148;
+  const r = 52, cx = size/2, cy = size/2, circumference = 2*Math.PI*r, sw = 18;
+  const total = segments.reduce((s,x)=>s+x.value,0) || 1;
+  let offset = 0, circles = "";
+  segments.forEach(seg=>{
+    if(seg.value<=0) return;
+    const frac = seg.value/total;
+    const dash = frac*circumference;
+    circles += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${sw}" stroke-dasharray="${dash.toFixed(2)} ${(circumference-dash).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += dash;
+  });
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line)" stroke-width="${sw}"/>${circles}</svg>`;
 }
 
 /* ============================================================
@@ -814,6 +890,7 @@ async function render(){
   const reported = await computeCarryOver();
   const general = reported + summary.total;
   const dash = computeDashboardForMonth(monthData, currentMonthKey);
+  const totalAbsenceDays = Object.values(dash.absenceCounts).reduce((s,n)=>s+n,0);
 
   // punch dots
   let dots = "";
@@ -853,6 +930,8 @@ async function render(){
       const kindVal = entry ? `${entry.kind}:${entry.typeId}` : "";
       let detail = "";
       if(entry && entry.kind==="presence"){
+        const typeDef = CONFIG.presenceTypes.find(t=>t.id===entry.typeId);
+        const isDailyTarget = !!(typeDef && typeDef.overtimeMode==="daily-target");
         detail = `
           <div class="times">
             <input type="time" value="${entry.start1||""}" onchange="updateField('${dateStr}','start1',this.value)">
@@ -864,6 +943,15 @@ async function render(){
             <input type="time" value="${entry.end2||""}" onchange="updateField('${dateStr}','end2',this.value)">
             ${c.breakWarn?'<span class="break-warn">⚠ pause &lt; 30\'</span>':""}
           </div>
+          ${isDailyTarget ? `
+          <div class="ot-row">
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Heures sup. (au-delà de 7h36) :</span>
+            <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','otMode',this.value)">
+              <option value="none" ${(entry.otMode||"none")==="none"?"selected":""}>Non comptabilisées (régime normal)</option>
+              <option value="simple" ${entry.otMode==="simple"?"selected":""}>Simple (×1)</option>
+              <option value="double" ${entry.otMode==="double"?"selected":""}>Double (×2)</option>
+            </select>
+          </div>` : `
           <div class="ot-row">
             <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Avant 8h10 :</span>
             <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','beforeMode',this.value)">
@@ -879,7 +967,7 @@ async function render(){
               <option value="simple" ${entry.otMode==="simple"?"selected":""}>Simple (×1)</option>
               <option value="double" ${entry.otMode==="double"?"selected":""}>Double (×2)</option>
             </select>
-          </div>`;
+          </div>`}`;
       } else if(entry && entry.kind==="absence"){
         detail = `<input type="text" class="note-input" placeholder="Note (facultatif)" value="${escapeHtml(entry.note||"")}" onchange="updateField('${dateStr}','note',this.value)">`;
       }
@@ -904,7 +992,10 @@ async function render(){
       deltaCell = `<td class="deltacell zero empty-flag">heures incomplètes</td>`;
     } else {
       const cls = c.deltaMin>0?"boni":(c.deltaMin<0?"mali":"zero");
-      deltaCell = `<td class="deltacell ${cls}">${fmtDelta(c.deltaMin)}<span class="worked-min">${fmtDur(c.workedMin)} prestées</span></td>`;
+      const workedLine = (c.dailyTargetMode && c.rawMin !== c.workedMin)
+        ? `${fmtDur(c.rawMin)} réellement prestées <span style="opacity:.65;">(${fmtDur(c.workedMin)} créditées)</span>`
+        : `${fmtDur(c.workedMin)} prestées`;
+      deltaCell = `<td class="deltacell ${cls}">${fmtDelta(c.deltaMin)}<span class="worked-min">${workedLine}</span></td>`;
     }
 
     rows += `<tr class="${rowClass.join(' ')}">
@@ -917,7 +1008,7 @@ async function render(){
   app.innerHTML = `
     <div class="cardhead">
       <div class="cardhead-top">
-        <div class="eyebrow"><span class="dot"></span> Carnet de pointage</div>
+        <div class="eyebrow caserespect"><span class="dot"></span> Carnet de pointage d'Olivier PRETTO</div>
         <div class="monthnav">
           <button onclick="changeMonth(-1)">‹</button>
           <div class="monthlabel">${MONTH_NAMES[m-1]} ${y}</div>
@@ -928,7 +1019,7 @@ async function render(){
       <div class="balance-row">
         <div class="balance-main">
           <div class="num ${totalClass}">${fmtDelta(summary.total)}<span class="badge ${totalClass}">${summary.total>0?'Boni':(summary.total<0?'Mali':'Équilibré')}</span></div>
-          <div class="lbl">Solde du mois (heures sport/culture incluses)</div>
+          <div class="lbl">Solde du mois${summary.moisComplet ? ' (heures sport/culture incluses)' : ' (heures sport/culture pas encore créditées)'}</div>
         </div>
         <div class="stat">
           <div class="num boni">${fmtDelta(summary.boniSum)}</div>
@@ -939,8 +1030,8 @@ async function render(){
           <div class="lbl">Mali du mois</div>
         </div>
         <div class="stat">
-          <div class="num" style="color:var(--amber)">${fmtDelta(summary.forfait)}</div>
-          <div class="lbl">Heures sport/Culture</div>
+          <div class="num" style="color:${summary.moisComplet?'var(--amber)':'var(--text-faint)'}">${summary.moisComplet ? fmtDelta(summary.forfait) : '≈'+fmtDelta(summary.forfaitEstime)}</div>
+          <div class="lbl">Heures sport/Culture${summary.moisComplet ? '' : ' <span style="opacity:.7;">(estimation, mois incomplet)</span>'}</div>
         </div>
         <div class="stat">
           <div class="num" style="color:var(--text-primary)">${summary.joursMaladie}</div>
@@ -950,7 +1041,7 @@ async function render(){
       <div class="punchdots">${dots}</div>
       <div class="lifetime">
         <div>Reporté des mois précédents : <b class="val ${reportedClass}">${fmtDelta(reported)}</b> &nbsp;+&nbsp; solde du mois : <b class="val ${totalClass==='zero'?'':totalClass}">${fmtDelta(summary.total)}</b> &nbsp;=&nbsp; solde général : <b class="val ${generalClass}">${fmtDelta(general)}</b></div>
-        <div style="font-style:italic;color:var(--text-faint);margin-top:3px;">${escapeHtml(balanceInWords(general))}</div>
+        <div style="font-style:italic;color:var(--text-faint);margin-top:3px;">${escapeHtml(balanceInDaysFormat(general))}</div>
         <div>${summary.joursRenseignes}/${summary.joursOuvres} jours ouvrés renseignés</div>
       </div>
     </div>
@@ -972,48 +1063,76 @@ async function render(){
       <div class="cell"><div class="num">${summary.joursMaladie}</div><div class="lbl">Jours maladie</div></div>
       <div class="cell"><div class="num">${summary.joursOuvres-summary.joursMaladie}</div><div class="lbl">Base du prorata (ouvrés − maladie)</div></div>
       <div class="cell"><div class="num" style="color:var(--amber)">${(summary.ratio*100).toFixed(0)}%</div><div class="lbl">Ratio sport/Culture</div></div>
-      <div class="formula"><b>Heures sport/Culture</b> = 6h × (${summary.joursOuvres} − ${summary.joursMaladie}) / ${summary.joursOuvres} = <b>${fmtDur(summary.forfait)}</b> &nbsp;·&nbsp; <b>Solde du mois</b> = cumul journalier ${fmtDelta(summary.sommeDelta)} + sport/culture ${fmtDelta(summary.forfait)} = <b>${fmtDelta(summary.total)}</b></div>
+      <div class="formula">
+        <b>Heures sport/Culture</b> = 6h × (${summary.joursOuvres} − ${summary.joursMaladie}) / ${summary.joursOuvres} = <b>${fmtDur(summary.forfaitEstime)}</b>
+        ${summary.moisComplet
+          ? ` — <span style="color:var(--boni);">créditées</span> (mois entièrement renseigné) &nbsp;·&nbsp; <b>Solde du mois</b> = cumul journalier ${fmtDelta(summary.sommeDelta)} + sport/culture ${fmtDelta(summary.forfait)} = <b>${fmtDelta(summary.total)}</b>`
+          : ` — <span style="color:var(--text-faint);">pas encore créditées</span> (${summary.joursOuvres-summary.joursRenseignes} jour(s) ouvré(s) encore à renseigner) &nbsp;·&nbsp; <b>Solde du mois</b> = cumul journalier ${fmtDelta(summary.sommeDelta)} seul pour l'instant`
+        }
+      </div>
     </div>
 
     <div class="dashboard">
       <div class="dash-title">Tableau de bord — ${MONTH_NAMES[m-1]} ${y}</div>
+
+      <div class="dash-visual">
+        <div class="donut-wrap">
+          ${donutSvg([
+            {value:dash.joursPrestes, color:"var(--teal)"},
+            {value:totalAbsenceDays, color:"var(--amber)"},
+            {value:dash.joursVides, color:"var(--line)"},
+          ])}
+          <div class="donut-center">
+            <div class="donut-num">${summary.joursOuvres}</div>
+            <div class="donut-lbl">jours ouvrés</div>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div class="legend-row"><span class="legend-dot" style="background:var(--teal)"></span> Jours prestés <b>${dash.joursPrestes}</b></div>
+          <div class="legend-row"><span class="legend-dot" style="background:var(--amber)"></span> Jours d'absence <b>${totalAbsenceDays}</b></div>
+          <div class="legend-row"><span class="legend-dot" style="background:var(--line)"></span> À renseigner <b>${dash.joursVides}</b></div>
+          <div class="legend-row" style="opacity:.7;border-top:1px solid var(--line);padding-top:8px;margin-top:2px;"><span class="legend-dot" style="background:var(--text-faint)"></span> Jours non ouvrés (hors total) <b>${dash.joursNonOuvres}</b></div>
+        </div>
+      </div>
+
       <div class="dash-grid">
         <div class="dash-card">
-          <div class="dash-card-num">${summary.joursOuvres}</div>
-          <div class="dash-card-lbl">1. Jours ouvrés</div>
-        </div>
-        <div class="dash-card">
           <div class="dash-card-num" style="color:var(--teal)">${dash.joursPrestes}</div>
-          <div class="dash-card-lbl">3. Jours prestés<br><span style="opacity:.75;">(droit à ticket repas)</span></div>
+          <div class="dash-card-lbl">Jours prestés<br><span style="opacity:.75;">(droit à ticket repas)</span></div>
         </div>
         <div class="dash-card">
           <div class="dash-card-num" style="color:var(--amber)">${dash.joursNonOuvres}</div>
-          <div class="dash-card-lbl">4. Jours non ouvrés<br><span style="opacity:.75;">(fériés / dispense)</span></div>
+          <div class="dash-card-lbl">Jours non ouvrés<br><span style="opacity:.75;">(fériés / dispense)</span></div>
         </div>
         <div class="dash-card">
           <div class="dash-card-num" style="color:var(--text-muted)">${dash.joursVides}</div>
-          <div class="dash-card-lbl">4. Jours à renseigner</div>
+          <div class="dash-card-lbl">Jours à renseigner</div>
         </div>
         <div class="dash-card">
           <div class="dash-card-num" style="color:var(--boni)">${dash.joursAvecHeuresSup}</div>
-          <div class="dash-card-lbl">4. Jours avec heures avant/après comptées</div>
+          <div class="dash-card-lbl">Jours avec heures avant/après comptées</div>
         </div>
       </div>
       <div class="dash-breakdown">
         <div class="bd-col">
-          <div class="bd-title">2. Ventilation — Présences</div>
-          ${breakdownRowsHtml(dash.presenceCounts, "presence")}
+          <div class="bd-title">Ventilation — Présences</div>
+          ${breakdownBarsHtml(dash.presenceCounts, "presence")}
+          <div class="bd-ticket-row">🍽️ <span>Ticket repas</span><b>${dash.joursPrestes} j.</b></div>
         </div>
         <div class="bd-col">
-          <div class="bd-title">2. Ventilation — Absences</div>
-          ${breakdownRowsHtml(dash.absenceCounts, "absence")}
+          <div class="bd-title">Ventilation — Absences</div>
+          ${breakdownBarsHtml(dash.absenceCounts, "absence")}
         </div>
       </div>
+      <div class="dash-note">Ticket repas calculé sur base des jours réellement prestés (télétravail, CPM, mission, formation...), un par jour presté.</div>
     </div>
 
     <div class="footerbar">
       <button class="textbtn" onclick="clearMonth()">Vider ce mois</button>
-      <button class="settingsbtn" onclick="openSettings()">⚙ Réglages des types &amp; horaire</button>
+      <div style="display:flex;gap:10px;">
+        <button class="settingsbtn primaryish" onclick="generateReport()">🖨 Générer le rapport du mois</button>
+        <button class="settingsbtn" onclick="openSettings()">⚙ Réglages des types &amp; horaire</button>
+      </div>
     </div>
   `;
 }
@@ -1062,6 +1181,164 @@ async function changeMonth(delta){
   await render();
 }
 
+/* ============================================================
+   RAPPORT MENSUEL IMPRIMABLE (PDF via l'aperçu avant impression)
+   ============================================================ */
+async function generateReport(){
+  const [y,m] = currentMonthKey.split("-").map(Number);
+  const nDays = daysInMonth(y, m-1);
+  const summary = computeMonthSummary();
+  const reported = await computeCarryOver();
+  const general = reported + summary.total;
+  const dash = computeDashboardForMonth(monthData, currentMonthKey);
+  const totalAbsenceDays = Object.values(dash.absenceCounts).reduce((s,n)=>s+n,0);
+
+  let rows = "";
+  for(let d=1; d<=nDays; d++){
+    const dow = new Date(y, m-1, d).getDay();
+    const dateStr = `${currentMonthKey}-${pad(d)}`;
+    const entry = monthData.days[dateStr];
+    const isWeekend = dow===0 || dow===6;
+    const c = computeDay(entry);
+    let typeLabel, detail = "", boniMali = "";
+    if(isWeekend){
+      typeLabel = "Week-end";
+    } else if(!entry || !entry.kind){
+      typeLabel = "—"; boniMali = "à renseigner";
+    } else if(entry.kind === "presence"){
+      typeLabel = labelFor("presence", entry.typeId);
+      detail = c.incomplete ? "heures incomplètes" : `${entry.start1||"?"}–${entry.end1||"?"} / ${entry.start2||"?"}–${entry.end2||"?"}`;
+      boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin);
+    } else {
+      typeLabel = labelFor("absence", entry.typeId);
+      detail = entry.note || (c.sick ? "maladie" : (c.excludeFromOuvres ? "jour non ouvré" : ""));
+      boniMali = c.fullDayMali ? fmtDelta(c.deltaMin) : "—";
+    }
+    rows += `<tr${isWeekend?' style="color:#aaa;"':''}>
+      <td>${pad(d)} ${DOW_NAMES[dow]}</td>
+      <td>${escapeHtml(typeLabel)}</td>
+      <td>${escapeHtml(detail)}</td>
+      <td style="text-align:right;font-weight:600;">${boniMali}</td>
+    </tr>`;
+  }
+
+  const donut = donutSvg([
+    {value:dash.joursPrestes, color:"#1F7A72"},
+    {value:totalAbsenceDays, color:"#95580B"},
+    {value:dash.joursVides, color:"#DDDAD2"},
+  ], 120);
+
+  const presenceRows = Object.keys(dash.presenceCounts)
+    .map(id=>({label:labelFor("presence",id), n:dash.presenceCounts[id]}))
+    .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+  const absenceRows = Object.keys(dash.absenceCounts)
+    .map(id=>({label:labelFor("absence",id), n:dash.absenceCounts[id]}))
+    .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
+  const listHtml = (list) => list.length
+    ? list.map(r=>`<tr><td>${escapeHtml(r.label)}</td><td style="text-align:right;">${r.n} j.</td></tr>`).join("")
+    : `<tr><td colspan="2" style="color:#999;">—</td></tr>`;
+
+  const forfaitLine = summary.moisComplet
+    ? `${fmtDelta(summary.forfait)} <span style="color:#2E8B4F;">(créditées)</span>`
+    : `≈${fmtDelta(summary.forfaitEstime)} <span style="color:#999;">(estimation)</span>`;
+
+  const today = new Date().toLocaleDateString("fr-BE", {day:"2-digit",month:"long",year:"numeric"});
+
+  const html = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>Rapport ${MONTH_NAMES[m-1]} ${y}</title>
+<style>
+  body{font-family: ui-sans-serif, -apple-system, "Segoe UI", Arial, sans-serif; color:#1a1712; padding:28px 34px; max-width:920px; margin:0 auto; font-size:13px;}
+  h1{font-size:19px;margin:0 0 2px;}
+  h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#555;margin:26px 0 10px;border-bottom:1px solid #ddd;padding-bottom:6px;}
+  .sub{color:#666;font-size:12px;margin-bottom:18px;}
+  .summary-line{font-size:13px;margin:14px 0 4px;padding:12px 16px;background:#F7F6F2;border:1px solid #E2DFD6;border-radius:8px;}
+  .words{font-style:italic;color:#666;font-size:12px;margin-top:4px;}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;}
+  th{background:#f2f1ec;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;}
+  .dashrow{display:flex;gap:34px;align-items:center;flex-wrap:wrap;}
+  .legend div{font-size:12px;margin-bottom:5px;}
+  .legend b{margin-left:4px;}
+  .twocol{display:flex;gap:26px;margin-top:6px;}
+  .twocol > div{flex:1;}
+  .twocol h4{font-size:11.5px;color:#555;margin:0 0 6px;}
+  .cards{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;}
+  .card{border:1px solid #E2DFD6;border-radius:8px;padding:10px 14px;min-width:110px;background:#FAFAF8;}
+  .card .n{font-size:18px;font-weight:700;}
+  .card .l{font-size:10px;color:#777;margin-top:2px;}
+  .sig{margin-top:56px;display:flex;justify-content:space-between;gap:40px;font-size:11.5px;}
+  .sig div{flex:1;border-top:1px solid #999;padding-top:6px;color:#555;}
+  footer{margin-top:26px;font-size:9.5px;color:#aaa;}
+  @media print{ body{padding:8mm 12mm;} h3{break-after:avoid;} tr{break-inside:avoid;} }
+</style></head>
+<body>
+  <h1>Carnet de pointage d'Olivier PRETTO</h1>
+  <div class="sub">Rapport mensuel — ${MONTH_NAMES[m-1]} ${y} — généré le ${today}</div>
+
+  <div class="summary-line">
+    Reporté des mois précédents : <b>${fmtDelta(reported)}</b> &nbsp;+&nbsp;
+    Solde du mois : <b>${fmtDelta(summary.total)}</b> &nbsp;=&nbsp;
+    Solde général : <b>${fmtDelta(general)}</b>
+    <div class="words">${escapeHtml(balanceInDaysFormat(general))}</div>
+  </div>
+
+  <h3>Tableau de bord</h3>
+  <div class="dashrow">
+    ${donut}
+    <div class="legend">
+      <div>🟢 Jours prestés <b>${dash.joursPrestes}</b></div>
+      <div>🟠 Jours d'absence <b>${totalAbsenceDays}</b></div>
+      <div>⚪ Jours à renseigner <b>${dash.joursVides}</b></div>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="n">${summary.joursOuvres}</div><div class="l">Jours ouvrés</div></div>
+    <div class="card"><div class="n">${summary.joursMaladie}</div><div class="l">Jours maladie</div></div>
+    <div class="card"><div class="n">${dash.joursNonOuvres}</div><div class="l">Jours non ouvrés (fériés/dispense)</div></div>
+    <div class="card"><div class="n">${dash.joursAvecHeuresSup}</div><div class="l">Jours avec heures avant/après comptées</div></div>
+    <div class="card"><div class="n">${forfaitLine}</div><div class="l">Heures sport/Culture</div></div>
+  </div>
+
+  <h3>Ventilation</h3>
+  <div class="twocol">
+    <div>
+      <h4>Présences</h4>
+      <table>${listHtml(presenceRows)}</table>
+      <div style="margin-top:8px;padding:8px 10px;background:#E4F5E9;border:1px solid #2E8B4F;border-radius:6px;font-size:12px;display:flex;justify-content:space-between;">
+        <span>🍽️ Ticket repas</span><b>${dash.joursPrestes} j.</b>
+      </div>
+    </div>
+    <div><h4>Absences</h4><table>${listHtml(absenceRows)}</table></div>
+  </div>
+  <div style="font-size:9.5px;color:#999;margin-top:6px;">Ticket repas calculé sur base des jours réellement prestés, un par jour presté.</div>
+
+  <h3>Détail journalier</h3>
+  <table>
+    <tr><th>Jour</th><th>Type</th><th>Détail</th><th style="text-align:right;">Boni / Mali</th></tr>
+    ${rows}
+  </table>
+
+  <div class="sig">
+    <div>Signature de l'agent</div>
+    <div>Vu et approuvé par le service compétent</div>
+  </div>
+  <footer>Document généré automatiquement par l'application Carnet de pointage.</footer>
+</body></html>`;
+
+  const win = window.open("", "_blank");
+  if(!win){
+    alert("Le navigateur a bloqué l'ouverture de la fenêtre du rapport. Autorise les pop-ups pour ce site, puis réessaie.");
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  const triggerPrint = () => { try{ win.focus(); win.print(); }catch(e){} };
+  win.onload = triggerPrint;
+  setTimeout(triggerPrint, 350); // filet de sécurité si onload ne se déclenche pas
+}
+
 async function clearMonth(){
   if(!confirm(`Vider toutes les données de ${currentMonthKey} ? Cette action est irréversible.`)) return;
   monthData = { days:{} };
@@ -1093,6 +1370,7 @@ function renderTypeList(containerId, list, kind){
         <label><input type="checkbox" ${t.fullDayMali?'checked':''} onchange="editTypeFlag('${t.id}','fullDayMali',this.checked)"> mali plein</label>
       ` : ""}
       ${kind==='presence' ? `<label><input type="checkbox" ${t.afternoonEndOverride?'checked':''} onchange="editTypeOverride('${t.id}',this.checked)"> fin anticipée</label>` : ""}
+      ${kind==='presence' ? `<label><input type="checkbox" ${t.overtimeMode==='daily-target'?'checked':''} onchange="editTypeDailyTarget('${t.id}',this.checked)"> heures sup. sur total journalier</label>` : ""}
       <button onclick="removeType('${kind}','${t.id}')" title="Supprimer">✕</button>
     </div>
   `).join("");
@@ -1135,6 +1413,13 @@ function editTypeOverride(id, checked){
   } else {
     delete t.afternoonEndOverride;
   }
+  renderTypeList("presenceList", CONFIG.presenceTypes, "presence");
+}
+function editTypeDailyTarget(id, checked){
+  const t = CONFIG.presenceTypes.find(x=>x.id===id);
+  if(!t) return;
+  if(checked) t.overtimeMode = "daily-target";
+  else delete t.overtimeMode;
   renderTypeList("presenceList", CONFIG.presenceTypes, "presence");
 }
 function removeType(kind, id){
