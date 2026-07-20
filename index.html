@@ -159,6 +159,26 @@
   .ot-row{display:flex;align-items:center;gap:5px;margin-top:5px;}
   .ot-row label{font-family:var(--mono);font-size:10.5px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer;}
   .ot-row input[type=checkbox]{accent-color:var(--amber);cursor:pointer;}
+  .travel-btn{
+    background:var(--ink-800);border:1px solid var(--line);color:var(--text-muted);
+    font-family:var(--mono);font-size:10.5px;padding:5px 10px;border-radius:6px;cursor:pointer;
+  }
+  .travel-btn:hover{border-color:var(--teal);color:var(--text-primary);}
+  .travel-btn.has-data{border-color:var(--teal);color:var(--teal);background:var(--ink-700);}
+  .travel-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;}
+  .travel-grid label{font-family:var(--mono);font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px;}
+  .travel-grid input{width:100%;}
+  .tr-mirror{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;color:var(--text-primary);
+    margin:18px 0;padding:10px 12px;background:var(--ink-800);border:1px solid var(--line);border-radius:7px;cursor:pointer;}
+  .travel-transport{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);}
+  .tr-radio{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:12px;color:var(--text-primary);margin-right:16px;cursor:pointer;}
+  .tr-suboptions{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-left:4px;}
+  .tr-suboptions label{font-family:var(--sans);font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer;}
+  .tr-suboptions input[type=text]{width:100%;}
+  .addr-save{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:6px;}
+  .addr-save input[type=text]{flex:1;min-width:100px;font-size:11px;padding:4px 6px;}
+
+
   .note-input{width:100%;min-width:110px;}
   .deltacell{font-family:var(--mono);font-weight:600;white-space:nowrap;}
   .deltacell.boni{color:var(--boni);}
@@ -320,6 +340,13 @@
       <div><label>Minutes</label><input type="number" id="cfgBalanceM" min="0" max="59" step="1"></div>
       <div><label>À la fin de</label><input type="month" id="cfgBalanceAsOf"></div>
     </div>
+    <h3>Adresses fréquentes (déplacements)</h3>
+    <div class="typelist" id="addressList"></div>
+    <div class="addrow" style="flex-wrap:wrap;">
+      <input type="text" id="newAddressLabel" placeholder="Nom (ex: Domicile)" style="flex:1;min-width:110px;">
+      <input type="text" id="newAddressValue" placeholder="Adresse complète" style="flex:2;min-width:180px;">
+      <button onclick="addAddress()">Ajouter</button>
+    </div>
     <h3>Connexion GitHub (synchronisation)</h3>
     <div id="ghConnInfo" style="font-family:var(--mono);font-size:11.5px;color:var(--text-muted);"></div>
     <div class="modal-actions" style="margin-top:8px;">
@@ -330,6 +357,112 @@
       <div style="display:flex;gap:8px;">
         <button class="closebtn" onclick="closeSettings()">Annuler</button>
         <button class="primarybtn" onclick="saveSettings()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="travelOverlay">
+  <div class="modal" style="max-width:640px;">
+    <h2>Déplacement — <span id="travelDateLabel"></span></h2>
+
+    <h3>Objet du déplacement</h3>
+    <select id="trObjetSelect" onchange="onObjetChange()" style="width:100%;">
+      <option value="">— Choisir —</option>
+      <option value="evaluation">Évaluation</option>
+      <option value="pe">Personnel d'encadrement (PE)</option>
+      <option value="reunion">Réunion</option>
+      <option value="autre">Autre (préciser)</option>
+    </select>
+    <input type="text" id="trObjetLibre" placeholder="Précisez l'objet du déplacement..." style="width:100%;margin-top:8px;display:none;">
+
+    <h3>Trajet aller</h3>
+    <div class="travel-grid">
+      <div>
+        <label>Lieu de départ</label>
+        <select id="trAllerLieuDepartSel" onchange="onAddressPick('trAllerLieuDepart')"></select>
+        <input type="text" id="trAllerLieuDepart" placeholder="Adresse complète" style="margin-top:6px;">
+        <label class="addr-save" id="trAllerLieuDepartSaveWrap" style="display:none;">
+          <input type="checkbox" id="trAllerLieuDepartSaveChk"> Ajouter à ma liste sous le nom :
+          <input type="text" id="trAllerLieuDepartSaveLabel" placeholder="ex: Bureau annexe">
+        </label>
+      </div>
+      <div><label>Heure de départ</label><input type="time" id="trAllerHeureDepart"></div>
+      <div>
+        <label>Lieu d'arrivée</label>
+        <select id="trAllerLieuArriveeSel" onchange="onAddressPick('trAllerLieuArrivee')"></select>
+        <input type="text" id="trAllerLieuArrivee" placeholder="Adresse complète" style="margin-top:6px;">
+        <label class="addr-save" id="trAllerLieuArriveeSaveWrap" style="display:none;">
+          <input type="checkbox" id="trAllerLieuArriveeSaveChk"> Ajouter à ma liste sous le nom :
+          <input type="text" id="trAllerLieuArriveeSaveLabel" placeholder="ex: Centre de formation">
+        </label>
+      </div>
+      <div><label>Heure d'arrivée (facultatif)</label><input type="time" id="trAllerHeureArrivee"></div>
+      <div><label>Pause de midi — début (facultatif)</label><input type="time" id="trAllerPauseDebut"></div>
+      <div><label>Pause de midi — fin (facultatif)</label><input type="time" id="trAllerPauseFin"></div>
+    </div>
+    <div class="travel-transport">
+      <label class="tr-radio"><input type="radio" name="trAllerMode" value="commun" onchange="updateTravelModeUI('aller')"> Transport en commun</label>
+      <label class="tr-radio"><input type="radio" name="trAllerMode" value="personnel" onchange="updateTravelModeUI('aller')"> Véhicule personnel</label>
+      <label class="tr-radio"><input type="radio" name="trAllerMode" value="autre" onchange="updateTravelModeUI('aller')"> Autre véhicule (collègue / service)</label>
+      <div id="trAllerCommunOptions" class="tr-suboptions" style="display:none;">
+        <label><input type="checkbox" id="trAllerBus"> Bus</label>
+        <label><input type="checkbox" id="trAllerTrain"> Train</label>
+        <label><input type="checkbox" id="trAllerTram"> Tram</label>
+        <label><input type="checkbox" id="trAllerMetro"> Métro</label>
+      </div>
+      <div id="trAllerAutreOptions" class="tr-suboptions" style="display:none;">
+        <input type="text" id="trAllerVehiculeAutre" placeholder="ex: Toyota hybride, Renault Master...">
+      </div>
+    </div>
+
+    <label class="tr-mirror"><input type="checkbox" id="trMirror" checked onchange="toggleMirrorUI()"> Retour identique à l'aller (trajet inversé — lieu et transport recopiés, heure et pause toujours à préciser)</label>
+
+    <h3>Trajet retour</h3>
+    <div class="travel-grid">
+      <div id="trRetourLieuDepartWrap">
+        <label>Lieu de départ</label>
+        <select id="trRetourLieuDepartSel" onchange="onAddressPick('trRetourLieuDepart')"></select>
+        <input type="text" id="trRetourLieuDepart" placeholder="Adresse complète" style="margin-top:6px;">
+        <label class="addr-save" id="trRetourLieuDepartSaveWrap" style="display:none;">
+          <input type="checkbox" id="trRetourLieuDepartSaveChk"> Ajouter à ma liste sous le nom :
+          <input type="text" id="trRetourLieuDepartSaveLabel" placeholder="ex: Bureau annexe">
+        </label>
+      </div>
+      <div><label>Heure de départ</label><input type="time" id="trRetourHeureDepart"></div>
+      <div id="trRetourLieuArriveeWrap">
+        <label>Lieu d'arrivée</label>
+        <select id="trRetourLieuArriveeSel" onchange="onAddressPick('trRetourLieuArrivee')"></select>
+        <input type="text" id="trRetourLieuArrivee" placeholder="Adresse complète" style="margin-top:6px;">
+        <label class="addr-save" id="trRetourLieuArriveeSaveWrap" style="display:none;">
+          <input type="checkbox" id="trRetourLieuArriveeSaveChk"> Ajouter à ma liste sous le nom :
+          <input type="text" id="trRetourLieuArriveeSaveLabel" placeholder="ex: Domicile">
+        </label>
+      </div>
+      <div><label>Heure d'arrivée (facultatif)</label><input type="time" id="trRetourHeureArrivee"></div>
+      <div><label>Pause de midi — début (facultatif)</label><input type="time" id="trRetourPauseDebut"></div>
+      <div><label>Pause de midi — fin (facultatif)</label><input type="time" id="trRetourPauseFin"></div>
+    </div>
+    <div class="travel-transport" id="trRetourTransportBlock">
+      <label class="tr-radio"><input type="radio" name="trRetourMode" value="commun" onchange="updateTravelModeUI('retour')"> Transport en commun</label>
+      <label class="tr-radio"><input type="radio" name="trRetourMode" value="personnel" onchange="updateTravelModeUI('retour')"> Véhicule personnel</label>
+      <label class="tr-radio"><input type="radio" name="trRetourMode" value="autre" onchange="updateTravelModeUI('retour')"> Autre véhicule (collègue / service)</label>
+      <div id="trRetourCommunOptions" class="tr-suboptions" style="display:none;">
+        <label><input type="checkbox" id="trRetourBus"> Bus</label>
+        <label><input type="checkbox" id="trRetourTrain"> Train</label>
+        <label><input type="checkbox" id="trRetourTram"> Tram</label>
+        <label><input type="checkbox" id="trRetourMetro"> Métro</label>
+      </div>
+      <div id="trRetourAutreOptions" class="tr-suboptions" style="display:none;">
+        <input type="text" id="trRetourVehiculeAutre" placeholder="ex: Toyota hybride, Renault Master...">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="dangerbtn" onclick="clearTravelData()">Effacer</button>
+      <div style="display:flex;gap:8px;">
+        <button class="closebtn" onclick="closeTravelModal()">Annuler</button>
+        <button class="primarybtn" onclick="saveTravelModal()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -347,10 +480,10 @@ const BREAK_MIN       = 30;               // pause obligatoire
 const DEFAULT_PRESENCE_TYPES = [
   { id:"cpm",                label:"CPM" },
   { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target" },
-  { id:"formation",          label:"Formation" },
-  { id:"mission",            label:"Mission" },
-  { id:"mission_cpm",        label:"Mission + CPM" },
-  { id:"mission_teletravail",label:"Mission + Télétravail" },
+  { id:"formation",          label:"Formation",   travelLog:true },
+  { id:"mission",            label:"Mission",     travelLog:true },
+  { id:"mission_cpm",        label:"Mission + CPM",         travelLog:true },
+  { id:"mission_teletravail",label:"Mission + Télétravail", travelLog:true },
   { id:"teambuilding",       label:"Teambuilding" },
   { id:"cpm_niv2",           label:"CPM - Niv2",  afternoonEndOverride:"15:16" },
   { id:"cpm_niv2plus",       label:"CPM - Niv2+", afternoonEndOverride:"14:16" },
@@ -368,7 +501,7 @@ const DEFAULT_ABSENCE_TYPES = [
   { id:"recup",       label:"Récupération en heures",    fullDayMali:true },
 ];
 const MONTHLY_FORFAIT_MIN = 6*60; // 6h "sport/Culture" ajoutées chaque mois, au prorata si maladie
-const CONFIG_VERSION = 4;
+const CONFIG_VERSION = 6;
 
 
 const DOW_NAMES = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -600,6 +733,7 @@ async function loadConfig(){
   let absenceTypes  = (parsed && parsed.absenceTypes  && parsed.absenceTypes.length)  ? parsed.absenceTypes  : JSON.parse(JSON.stringify(DEFAULT_ABSENCE_TYPES));
   const schedule = (parsed && parsed.schedule) || DEFAULT_SCHEDULE;
   let openingBalance = (parsed && parsed.openingBalance) || null;
+  let addresses = (parsed && parsed.addresses) || null;
   const version = (parsed && parsed.version) || 1;
 
   if(version < CONFIG_VERSION){
@@ -625,9 +759,25 @@ async function loadConfig(){
 
     // télétravail : les heures sup. se comptent sur le total journalier (au-delà de 7h36), pas sur des heures d'horloge
     presenceTypes.forEach(t=>{ if(t.id==="teletravail" && !t.overtimeMode) t.overtimeMode = "daily-target"; });
-  }
 
-  CONFIG = { presenceTypes, absenceTypes, schedule, openingBalance, version: CONFIG_VERSION };
+    // formation/mission : trace des informations de déplacement (aller/retour)
+    presenceTypes.forEach(t=>{
+      if(["formation","mission","mission_cpm","mission_teletravail"].includes(t.id) && t.travelLog===undefined) t.travelLog = true;
+    });
+
+    // liste d'adresses fréquentes (uniquement si rien n'est déjà défini)
+    if(!addresses){
+      addresses = [
+        { id:"domicile", label:"Domicile",   address:"Route de Saint-Gérard 49, 5070 Fosses-la-Ville" },
+        { id:"cpm",      label:"CPM",         address:"Rue des Reines Marguerites 4, 5100 Naninne" },
+        { id:"marlagne", label:"La Marlagne", address:"Chemin des Marronniers 26, 5100 Wépion" },
+        { id:"fwb",      label:"FWB",         address:"Boulevard Léopold II 44, 1080 Molenbeek-Saint-Jean" },
+      ];
+    }
+  }
+  if(!addresses) addresses = [];
+
+  CONFIG = { presenceTypes, absenceTypes, schedule, openingBalance, addresses, version: CONFIG_VERSION };
   await storageSet("horaire-config", JSON.stringify(CONFIG));
 }
 
@@ -967,7 +1117,11 @@ async function render(){
               <option value="simple" ${entry.otMode==="simple"?"selected":""}>Simple (×1)</option>
               <option value="double" ${entry.otMode==="double"?"selected":""}>Double (×2)</option>
             </select>
-          </div>`}`;
+          </div>`}
+          ${typeDef && typeDef.travelLog ? `
+          <div class="ot-row">
+            <button class="travel-btn${entry.travel?' has-data':''}" onclick="openTravelModal('${dateStr}')">🚗 Déplacement${entry.travel?' ✓':''}</button>
+          </div>` : ""}`;
       } else if(entry && entry.kind==="absence"){
         detail = `<input type="text" class="note-input" placeholder="Note (facultatif)" value="${escapeHtml(entry.note||"")}" onchange="updateField('${dateStr}','note',this.value)">`;
       }
@@ -1184,6 +1338,41 @@ async function changeMonth(delta){
 /* ============================================================
    RAPPORT MENSUEL IMPRIMABLE (PDF via l'aperçu avant impression)
    ============================================================ */
+function transportLabel(leg){
+  if(leg.transportCommun){
+    const moyens = {bus:"bus", train:"train", tram:"tram", metro:"métro"};
+    const list = (leg.transportMoyens||[]).map(m=>moyens[m]||m);
+    return list.length ? "transport en commun (" + list.join(", ") + ")" : "transport en commun";
+  }
+  if(leg.vehiculePersonnel) return "véhicule personnel";
+  if(leg.vehiculeAutre) return leg.vehiculeAutre;
+  return "";
+}
+function objetLabel(objet){
+  if(!objet || !objet.type) return "";
+  const labels = { evaluation:"Évaluation", pe:"Personnel d'encadrement (PE)", reunion:"Réunion" };
+  if(objet.type==="autre") return objet.libre || "Autre";
+  return labels[objet.type] || "";
+}
+function formatTravelSummary(travel){
+  if(!travel) return "";
+  const a = travel.aller || {}, r = travel.retour || {};
+  const parts = [];
+  const obj = objetLabel(travel.objet);
+  if(obj) parts.push(`📋 Objet : ${obj}`);
+  const allerLoc = (a.lieuDepart||"?") + "→" + (a.lieuArrivee||"?");
+  const allerHeures = a.heureDepart ? `${a.heureDepart}${a.heureArrivee?"–"+a.heureArrivee:""}` : "";
+  const allerTr = transportLabel(a);
+  parts.push(`🚗 Aller ${allerLoc}${allerHeures?" "+allerHeures:""}${allerTr?" ("+allerTr+")":""}`);
+  const retourHeures = r.heureDepart ? `${r.heureDepart}${r.heureArrivee?"–"+r.heureArrivee:""}` : "";
+  if(retourHeures || !travel.mirror){
+    const retourLoc = travel.mirror ? "" : (r.lieuDepart||"?") + "→" + (r.lieuArrivee||"?") + " ";
+    const retourTr = travel.mirror ? "" : transportLabel(r);
+    parts.push(`Retour ${retourLoc}${retourHeures}${retourTr?" ("+retourTr+")":""}`);
+  }
+  return parts.join(" · ");
+}
+
 async function generateReport(){
   const [y,m] = currentMonthKey.split("-").map(Number);
   const nDays = daysInMonth(y, m-1);
@@ -1214,10 +1403,13 @@ async function generateReport(){
       detail = entry.note || (c.sick ? "maladie" : (c.excludeFromOuvres ? "jour non ouvré" : ""));
       boniMali = c.fullDayMali ? fmtDelta(c.deltaMin) : "—";
     }
+    const travelHtml = (entry && entry.kind==="presence" && entry.travel)
+      ? `<br><span style="color:#666;font-size:10.5px;">${escapeHtml(formatTravelSummary(entry.travel))}</span>`
+      : "";
     rows += `<tr${isWeekend?' style="color:#aaa;"':''}>
       <td>${pad(d)} ${DOW_NAMES[dow]}</td>
       <td>${escapeHtml(typeLabel)}</td>
-      <td>${escapeHtml(detail)}</td>
+      <td>${escapeHtml(detail)}${travelHtml}</td>
       <td style="text-align:right;font-weight:600;">${boniMali}</td>
     </tr>`;
   }
@@ -1339,6 +1531,237 @@ async function generateReport(){
   setTimeout(triggerPrint, 350); // filet de sécurité si onload ne se déclenche pas
 }
 
+/* ============================================================
+   DÉPLACEMENTS (formation / mission) — aller / retour
+   ============================================================ */
+let TRAVEL_DATE = null;
+
+function openTravelModal(dateStr){
+  TRAVEL_DATE = dateStr;
+  const entry = monthData.days[dateStr];
+  const t = (entry && entry.travel) || {};
+  const aller = t.aller || {};
+  const retour = t.retour || {};
+  const objet = t.objet || {};
+
+  document.getElementById("travelDateLabel").textContent = dateStr;
+
+  document.getElementById("trObjetSelect").value = objet.type || "";
+  document.getElementById("trObjetLibre").value = objet.libre || "";
+  onObjetChange();
+
+  document.getElementById("trAllerHeureDepart").value = aller.heureDepart || "";
+  document.getElementById("trAllerHeureArrivee").value = aller.heureArrivee || "";
+  document.getElementById("trAllerPauseDebut").value = aller.pauseDebut || "";
+  document.getElementById("trAllerPauseFin").value = aller.pauseFin || "";
+  setTravelModeUI("aller", aller);
+
+  document.getElementById("trMirror").checked = (t.mirror !== false);
+  document.getElementById("trRetourHeureDepart").value = retour.heureDepart || "";
+  document.getElementById("trRetourHeureArrivee").value = retour.heureArrivee || "";
+  document.getElementById("trRetourPauseDebut").value = retour.pauseDebut || "";
+  document.getElementById("trRetourPauseFin").value = retour.pauseFin || "";
+  setTravelModeUI("retour", retour);
+
+  syncAddressSelect("trAllerLieuDepart", aller.lieuDepart || "");
+  syncAddressSelect("trAllerLieuArrivee", aller.lieuArrivee || "");
+  syncAddressSelect("trRetourLieuDepart", retour.lieuDepart || "");
+  syncAddressSelect("trRetourLieuArrivee", retour.lieuArrivee || "");
+
+  updateTravelModeUI("aller");
+  updateTravelModeUI("retour");
+  toggleMirrorUI();
+
+  document.getElementById("travelOverlay").classList.add("show");
+}
+
+function onObjetChange(){
+  const v = document.getElementById("trObjetSelect").value;
+  document.getElementById("trObjetLibre").style.display = (v==="autre") ? "block" : "none";
+}
+
+/* ---- Sélecteur d'adresse (liste + champ libre + option d'enregistrement) ---- */
+function addressOptionsHtml(){
+  let html = `<option value="">— Choisir dans la liste —</option>`;
+  sortedByLabel(CONFIG.addresses).forEach(a=>{
+    html += `<option value="${escapeHtml(a.address)}">${escapeHtml(a.label)} — ${escapeHtml(a.address)}</option>`;
+  });
+  html += `<option value="__custom__">➕ Champ libre : à compléter</option>`;
+  return html;
+}
+function syncAddressSelect(fieldId, currentValue){
+  const sel = document.getElementById(fieldId+"Sel");
+  sel.innerHTML = addressOptionsHtml();
+  const input = document.getElementById(fieldId);
+  const saveWrap = document.getElementById(fieldId+"SaveWrap");
+  const known = CONFIG.addresses.find(a=>a.address===currentValue);
+  input.value = currentValue || "";
+  if(known){
+    sel.value = known.address;
+    input.readOnly = true;
+    saveWrap.style.display = "none";
+  } else if(currentValue){
+    sel.value = "__custom__";
+    input.readOnly = false;
+    saveWrap.style.display = "flex";
+  } else {
+    sel.value = "";
+    input.readOnly = false;
+    saveWrap.style.display = "none";
+  }
+  document.getElementById(fieldId+"SaveChk").checked = false;
+  document.getElementById(fieldId+"SaveLabel").value = "";
+}
+function onAddressPick(fieldId){
+  const sel = document.getElementById(fieldId+"Sel");
+  const input = document.getElementById(fieldId);
+  const saveWrap = document.getElementById(fieldId+"SaveWrap");
+  if(sel.value === "__custom__"){
+    input.value = "";
+    input.readOnly = false;
+    input.focus();
+    saveWrap.style.display = "flex";
+  } else if(sel.value){
+    input.value = sel.value;
+    input.readOnly = true;
+    saveWrap.style.display = "none";
+  } else {
+    input.value = "";
+    input.readOnly = false;
+    saveWrap.style.display = "none";
+  }
+}
+function maybeSaveAddress(fieldId){
+  const chk = document.getElementById(fieldId+"SaveChk");
+  if(!chk || !chk.checked) return false;
+  const label = document.getElementById(fieldId+"SaveLabel").value.trim();
+  const address = document.getElementById(fieldId).value.trim();
+  if(!label || !address) return false;
+  if(CONFIG.addresses.some(a=>a.address===address)) return false;
+  let id = slugify(label);
+  if(CONFIG.addresses.some(a=>a.id===id)) id = id + "_" + Date.now().toString(36);
+  CONFIG.addresses.push({ id, label, address });
+  return true;
+}
+
+function legPrefix(leg){ return leg==="aller" ? "trAller" : "trRetour"; }
+function legRadioName(leg){ return leg==="aller" ? "trAllerMode" : "trRetourMode"; }
+
+function setTravelModeUI(leg, data){
+  const mode = data.transportCommun ? "commun" : (data.vehiculePersonnel ? "personnel" : (data.vehiculeAutre ? "autre" : ""));
+  document.getElementsByName(legRadioName(leg)).forEach(r=>{ r.checked = (r.value===mode); });
+  const p = legPrefix(leg);
+  const moyens = data.transportMoyens || [];
+  ["Bus","Train","Tram","Metro"].forEach(mv=>{
+    document.getElementById(`${p}${mv}`).checked = moyens.includes(mv.toLowerCase());
+  });
+  document.getElementById(`${p}VehiculeAutre`).value = data.vehiculeAutre || "";
+}
+
+function updateTravelModeUI(leg){
+  const p = legPrefix(leg);
+  const checked = document.querySelector(`input[name="${legRadioName(leg)}"]:checked`);
+  const mode = checked ? checked.value : "";
+  document.getElementById(`${p}CommunOptions`).style.display = mode==="commun" ? "flex" : "none";
+  document.getElementById(`${p}AutreOptions`).style.display = mode==="autre" ? "block" : "none";
+}
+
+function toggleMirrorUI(){
+  const mirror = document.getElementById("trMirror").checked;
+  document.getElementById("trRetourLieuDepartWrap").style.display = mirror ? "none" : "block";
+  document.getElementById("trRetourLieuArriveeWrap").style.display = mirror ? "none" : "block";
+  document.getElementById("trRetourTransportBlock").style.display = mirror ? "none" : "block";
+}
+
+function closeTravelModal(){
+  document.getElementById("travelOverlay").classList.remove("show");
+  TRAVEL_DATE = null;
+}
+
+function readTravelModeData(leg){
+  const p = legPrefix(leg);
+  const checked = document.querySelector(`input[name="${legRadioName(leg)}"]:checked`);
+  const mode = checked ? checked.value : "";
+  const data = { transportCommun:false, transportMoyens:[], vehiculePersonnel:false, vehiculeAutre:"" };
+  if(mode==="commun"){
+    data.transportCommun = true;
+    ["Bus","Train","Tram","Metro"].forEach(mv=>{
+      if(document.getElementById(`${p}${mv}`).checked) data.transportMoyens.push(mv.toLowerCase());
+    });
+  } else if(mode==="personnel"){
+    data.vehiculePersonnel = true;
+  } else if(mode==="autre"){
+    data.vehiculeAutre = document.getElementById(`${p}VehiculeAutre`).value.trim();
+  }
+  return data;
+}
+
+async function saveTravelModal(){
+  if(!TRAVEL_DATE) return;
+  const mirror = document.getElementById("trMirror").checked;
+
+  const objetType = document.getElementById("trObjetSelect").value;
+  const objet = { type: objetType, libre: objetType==="autre" ? document.getElementById("trObjetLibre").value.trim() : "" };
+
+  const aller = {
+    lieuDepart: document.getElementById("trAllerLieuDepart").value.trim(),
+    heureDepart: document.getElementById("trAllerHeureDepart").value,
+    lieuArrivee: document.getElementById("trAllerLieuArrivee").value.trim(),
+    heureArrivee: document.getElementById("trAllerHeureArrivee").value,
+    pauseDebut: document.getElementById("trAllerPauseDebut").value,
+    pauseFin: document.getElementById("trAllerPauseFin").value,
+    ...readTravelModeData("aller"),
+  };
+
+  let retour;
+  if(mirror){
+    retour = {
+      lieuDepart: aller.lieuArrivee,
+      lieuArrivee: aller.lieuDepart,
+      heureDepart: document.getElementById("trRetourHeureDepart").value,
+      heureArrivee: document.getElementById("trRetourHeureArrivee").value,
+      pauseDebut: document.getElementById("trRetourPauseDebut").value,
+      pauseFin: document.getElementById("trRetourPauseFin").value,
+      transportCommun: aller.transportCommun,
+      transportMoyens: aller.transportMoyens.slice(),
+      vehiculePersonnel: aller.vehiculePersonnel,
+      vehiculeAutre: aller.vehiculeAutre,
+    };
+  } else {
+    retour = {
+      lieuDepart: document.getElementById("trRetourLieuDepart").value.trim(),
+      heureDepart: document.getElementById("trRetourHeureDepart").value,
+      lieuArrivee: document.getElementById("trRetourLieuArrivee").value.trim(),
+      heureArrivee: document.getElementById("trRetourHeureArrivee").value,
+      pauseDebut: document.getElementById("trRetourPauseDebut").value,
+      pauseFin: document.getElementById("trRetourPauseFin").value,
+      ...readTravelModeData("retour"),
+    };
+  }
+
+  // enregistrement facultatif des nouvelles adresses dans la liste
+  let addressesChanged = false;
+  if(maybeSaveAddress("trAllerLieuDepart")) addressesChanged = true;
+  if(maybeSaveAddress("trAllerLieuArrivee")) addressesChanged = true;
+  if(!mirror){
+    if(maybeSaveAddress("trRetourLieuDepart")) addressesChanged = true;
+    if(maybeSaveAddress("trRetourLieuArrivee")) addressesChanged = true;
+  }
+  if(addressesChanged) await storageSet("horaire-config", JSON.stringify(CONFIG));
+
+  await updateField(TRAVEL_DATE, "travel", { mirror, objet, aller, retour });
+  closeTravelModal();
+  showToast("Déplacement enregistré");
+}
+
+async function clearTravelData(){
+  if(!TRAVEL_DATE) return;
+  if(!confirm("Effacer les informations de déplacement de ce jour ?")) return;
+  await updateField(TRAVEL_DATE, "travel", null);
+  closeTravelModal();
+  showToast("Déplacement effacé");
+}
+
 async function clearMonth(){
   if(!confirm(`Vider toutes les données de ${currentMonthKey} ? Cette action est irréversible.`)) return;
   monthData = { days:{} };
@@ -1371,6 +1794,7 @@ function renderTypeList(containerId, list, kind){
       ` : ""}
       ${kind==='presence' ? `<label><input type="checkbox" ${t.afternoonEndOverride?'checked':''} onchange="editTypeOverride('${t.id}',this.checked)"> fin anticipée</label>` : ""}
       ${kind==='presence' ? `<label><input type="checkbox" ${t.overtimeMode==='daily-target'?'checked':''} onchange="editTypeDailyTarget('${t.id}',this.checked)"> heures sup. sur total journalier</label>` : ""}
+      ${kind==='presence' ? `<label><input type="checkbox" ${t.travelLog?'checked':''} onchange="editTypeTravelLog('${t.id}',this.checked)"> trace les déplacements</label>` : ""}
       <button onclick="removeType('${kind}','${t.id}')" title="Supprimer">✕</button>
     </div>
   `).join("");
@@ -1379,6 +1803,7 @@ function renderTypeList(containerId, list, kind){
 function openSettings(){
   renderTypeList("presenceList", CONFIG.presenceTypes, "presence");
   renderTypeList("absenceList", CONFIG.absenceTypes, "absence");
+  renderAddressList();
   document.getElementById("cfgStart1").value = CONFIG.schedule.start1;
   document.getElementById("cfgEnd1").value = CONFIG.schedule.end1;
   document.getElementById("cfgStart2").value = CONFIG.schedule.start2;
@@ -1422,6 +1847,12 @@ function editTypeDailyTarget(id, checked){
   else delete t.overtimeMode;
   renderTypeList("presenceList", CONFIG.presenceTypes, "presence");
 }
+function editTypeTravelLog(id, checked){
+  const t = CONFIG.presenceTypes.find(x=>x.id===id);
+  if(!t) return;
+  t.travelLog = checked;
+  renderTypeList("presenceList", CONFIG.presenceTypes, "presence");
+}
 function removeType(kind, id){
   const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
   const idx = list.findIndex(x=>x.id===id);
@@ -1445,6 +1876,43 @@ function addType(kind){
   input.value = "";
   renderTypeList(kind==="presence"?"presenceList":"absenceList", list, kind);
 }
+
+/* ---- Adresses fréquentes ---- */
+function renderAddressList(){
+  const el = document.getElementById("addressList");
+  const display = sortedByLabel(CONFIG.addresses);
+  el.innerHTML = display.length ? display.map(a=>`
+    <div class="typerow">
+      <input type="text" value="${escapeHtml(a.label)}" style="max-width:130px;" onchange="editAddressLabel('${a.id}',this.value)">
+      <input type="text" value="${escapeHtml(a.address)}" onchange="editAddressValue('${a.id}',this.value)">
+      <button onclick="removeAddress('${a.id}')" title="Supprimer">✕</button>
+    </div>
+  `).join("") : `<div class="bd-empty">Aucune adresse enregistrée.</div>`;
+}
+function editAddressLabel(id, value){
+  const a = CONFIG.addresses.find(x=>x.id===id);
+  if(a) a.label = value;
+}
+function editAddressValue(id, value){
+  const a = CONFIG.addresses.find(x=>x.id===id);
+  if(a) a.address = value;
+}
+function removeAddress(id){
+  CONFIG.addresses = CONFIG.addresses.filter(a=>a.id!==id);
+  renderAddressList();
+}
+function addAddress(){
+  const labelInput = document.getElementById("newAddressLabel");
+  const valueInput = document.getElementById("newAddressValue");
+  const label = labelInput.value.trim(), address = valueInput.value.trim();
+  if(!label || !address) return;
+  let id = slugify(label);
+  if(CONFIG.addresses.some(a=>a.id===id)) id = id + "_" + Date.now().toString(36);
+  CONFIG.addresses.push({ id, label, address });
+  labelInput.value = ""; valueInput.value = "";
+  renderAddressList();
+}
+
 async function saveSettings(){
   CONFIG.schedule = {
     start1: document.getElementById("cfgStart1").value || DEFAULT_SCHEDULE.start1,
