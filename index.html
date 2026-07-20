@@ -268,6 +268,7 @@
   .typelist{display:flex;flex-direction:column;gap:6px;}
   .typerow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--ink-800);border:1px solid var(--line);border-radius:6px;padding:6px 8px;}
   .type-color{width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:5px;cursor:pointer;background:none;flex-shrink:0;}
+  .type-icon{width:40px;text-align:center;flex-shrink:0;}
   .type-color::-webkit-color-swatch-wrapper{padding:2px;}
   .type-color::-webkit-color-swatch{border:none;border-radius:3px;}
   .typerow input[type=text]{flex:1;}
@@ -521,30 +522,30 @@ const DEFAULT_SCHEDULE = { start1:"08:10", end1:"12:00", start2:"12:30", end2:"1
 const BREAK_MIN       = 30;               // pause obligatoire
 
 const DEFAULT_PRESENCE_TYPES = [
-  { id:"cpm",                label:"CPM",                    color:"#1F7A72" },
-  { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target", color:"#2B8CA8" },
-  { id:"formation",          label:"Formation",   travelLog:true, color:"#6A4C93" },
-  { id:"mission",            label:"Mission",     travelLog:true, color:"#2E5C8A" },
-  { id:"mission_cpm",        label:"Mission + CPM",         travelLog:true, color:"#4A7BAE" },
-  { id:"mission_teletravail",label:"Mission + Télétravail", travelLog:true, color:"#7098C4" },
-  { id:"teambuilding",       label:"Teambuilding", color:"#B5568C" },
-  { id:"cpm_niv2",           label:"CPM - Niv2",  afternoonEndOverride:"15:16", color:"#3F9690" },
-  { id:"cpm_niv2plus",       label:"CPM - Niv2+", afternoonEndOverride:"14:16", color:"#6BB3AE" },
+  { id:"cpm",                label:"CPM",                    color:"#1F7A72", icon:"🏢", description:"Vous êtes physiquement présent sur votre lieu de travail habituel." },
+  { id:"teletravail",        label:"Télétravail",  overtimeMode:"daily-target", color:"#2B8CA8", icon:"🏠", description:"Vous travaillez depuis un lieu autre que votre lieu habituel (sur autorisation)." },
+  { id:"formation",          label:"Formation",   travelLog:true, color:"#6A4C93", icon:"🎓", description:"Vous suivez une formation autorisée en lien avec votre fonction." },
+  { id:"mission",            label:"Mission",     travelLog:true, color:"#2E5C8A", icon:"💼", description:"Vous vous déplacez pour le compte de l'organisation (réunion, visite, événement...)." },
+  { id:"mission_cpm",        label:"Mission + CPM",         travelLog:true, color:"#4A7BAE", icon:"💼", description:"Vous combinez une mission et une présence sur votre lieu de travail habituel." },
+  { id:"mission_teletravail",label:"Mission + Télétravail", travelLog:true, color:"#7098C4", icon:"🧳", description:"Vous effectuez une mission et complétez votre prestation en télétravail." },
+  { id:"teambuilding",       label:"Teambuilding", color:"#B5568C", icon:"👥", description:"Participation à une activité de renforcement d'équipe organisée par l'organisation." },
+  { id:"cpm_niv2",           label:"CPM - Niv2",  afternoonEndOverride:"15:16", color:"#3F9690", icon:"🌤️", description:"Présentiel avec fin de journée anticipée (conditions climatiques — Niveau 2)." },
+  { id:"cpm_niv2plus",       label:"CPM - Niv2+", afternoonEndOverride:"14:16", color:"#6BB3AE", icon:"⛈️", description:"Présentiel avec fin de journée fortement anticipée (conditions climatiques — Niveau 2+)." },
 ];
 const DEFAULT_ABSENCE_TYPES = [
-  { id:"maladie",     label:"Maladie",                   sick:true, color:"#B23A22" },
-  { id:"circonstance",label:"Circonstance", color:"#6B6459" },
-  { id:"dispense",    label:"Dispense de service",       excludeFromOuvres:true, color:"#A64B2A" },
-  { id:"dispense_med",label:"Dispense médicale", color:"#C06B4B" },
-  { id:"dispense_syn",label:"Dispense syndicale", color:"#D68F73" },
-  { id:"ferie",       label:"Jour férié",                excludeFromOuvres:true, color:"#4F7942" },
-  { id:"conge",       label:"Congé", color:"#95580B" },
-  { id:"conge_comp",  label:"Congé de compensation",     excludeFromOuvres:true, color:"#B8792F" },
-  { id:"conge_reg",   label:"Congé réglementaire",       excludeFromOuvres:true, color:"#D4A15E" },
-  { id:"recup",       label:"Récupération en heures",    fullDayMali:true, color:"#8B3A62" },
+  { id:"maladie",     label:"Maladie",                   sick:true, color:"#B23A22", icon:"💊", description:"Incapacité de travail pour raisons de santé (certificat médical requis)." },
+  { id:"circonstance",label:"Circonstance", color:"#6B6459", icon:"📋", description:"Absence liée à des circonstances exceptionnelles (décès, événement grave...)." },
+  { id:"dispense",    label:"Dispense de service",       excludeFromOuvres:true, color:"#A64B2A", icon:"🕐", description:"Vous êtes dispensé de prestation de travail, sur accord de l'organisation." },
+  { id:"dispense_med",label:"Dispense médicale", color:"#C06B4B", icon:"➕", description:"Dispense accordée pour raisons de santé, sans incapacité de travail." },
+  { id:"dispense_syn",label:"Dispense syndicale", color:"#D68F73", icon:"🤝", description:"Dispense accordée pour activité syndicale, sur mandat." },
+  { id:"ferie",       label:"Jour férié",                excludeFromOuvres:true, color:"#4F7942", icon:"🌴", description:"Jour férié légal ou réglementaire." },
+  { id:"conge",       label:"Congé", color:"#95580B", icon:"☂️", description:"Congé annuel ou autre congé autorisé selon vos droits." },
+  { id:"conge_comp",  label:"Congé de compensation",     excludeFromOuvres:true, color:"#B8792F", icon:"💶", description:"Récupération d'heures supplémentaires ou d'efforts exceptionnels." },
+  { id:"conge_reg",   label:"Congé réglementaire",       excludeFromOuvres:true, color:"#D4A15E", icon:"⚖️", description:"Congé prévu par la réglementation (mariage, naissance, déménagement...)." },
+  { id:"recup",       label:"Récupération en heures",    fullDayMali:true, color:"#8B3A62", icon:"🕒", description:"Récupération d'heures prises en dehors du temps de travail habituel." },
 ];
 const MONTHLY_FORFAIT_MIN = 6*60; // 6h "sport/Culture" ajoutées chaque mois, au prorata si maladie
-const CONFIG_VERSION = 8;
+const CONFIG_VERSION = 9;
 
 
 const DOW_NAMES = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
@@ -882,6 +883,14 @@ async function loadConfig(){
     // types personnalisés sans couleur connue : couleur de secours neutre selon la famille
     presenceTypes.forEach(t=>{ if(!t.color) t.color = "#1F7A72"; });
     absenceTypes.forEach(t=>{ if(!t.color) t.color = "#95580B"; });
+
+    // icônes + descriptions (uniquement pour les types déjà connus, sans écraser une saisie déjà faite)
+    const DEFAULT_ICONS = {}, DEFAULT_DESCR = {};
+    [...DEFAULT_PRESENCE_TYPES, ...DEFAULT_ABSENCE_TYPES].forEach(t=>{ DEFAULT_ICONS[t.id]=t.icon; DEFAULT_DESCR[t.id]=t.description; });
+    [...presenceTypes, ...absenceTypes].forEach(t=>{
+      if(!t.icon && DEFAULT_ICONS[t.id]) t.icon = DEFAULT_ICONS[t.id];
+      if(!t.description && DEFAULT_DESCR[t.id]) t.description = DEFAULT_DESCR[t.id];
+    });
   }
   if(!addresses) addresses = [];
 
@@ -1405,7 +1414,8 @@ async function render(){
 
     <div class="footerbar">
       <button class="textbtn" onclick="clearMonth()">Vider ce mois</button>
-      <div style="display:flex;gap:10px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="settingsbtn" onclick="generateReferenceSheet()">📋 Fiche de référence des types</button>
         <button class="settingsbtn primaryish" onclick="generateReport()">🖨 Générer le rapport du mois</button>
         <button class="settingsbtn" onclick="openSettings()">⚙ Réglages des types &amp; horaire</button>
       </div>
@@ -1493,6 +1503,85 @@ function formatTravelSummary(travel){
     parts.push(`Retour ${retourLoc}${retourHeures}${retourTr?" ("+retourTr+")":""}`);
   }
   return parts.join(" · ");
+}
+
+async function generateReferenceSheet(){
+  const presenceRows = sortedByLabel(CONFIG.presenceTypes).map(t=>`
+    <div class="fp-row">
+      <div class="fp-badge" style="background:${t.color}22;border:2px solid ${t.color};">${t.icon||"•"}</div>
+      <div class="fp-text">
+        <div class="fp-label" style="color:${t.color};">${escapeHtml(t.label.toUpperCase())}</div>
+        <div class="fp-descr">${escapeHtml(t.description||"—")}</div>
+      </div>
+    </div>`).join("");
+  const absenceRows = sortedByLabel(CONFIG.absenceTypes).map(t=>`
+    <div class="fp-row">
+      <div class="fp-badge" style="background:${t.color}22;border:2px solid ${t.color};">${t.icon||"•"}</div>
+      <div class="fp-text">
+        <div class="fp-label" style="color:${t.color};">${escapeHtml(t.label.toUpperCase())}</div>
+        <div class="fp-descr">${escapeHtml(t.description||"—")}</div>
+      </div>
+    </div>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>Fiche prestations</title>
+<style>
+  body{font-family: ui-sans-serif, -apple-system, "Segoe UI", Arial, sans-serif; color:#1a1712; margin:0; padding:22px; max-width:1000px; margin:0 auto; font-size:13px; background:#fff;}
+  .fp-header{background:#12305C;color:#fff;border-radius:14px;padding:20px 26px;display:flex;align-items:center;gap:18px;margin-bottom:22px;}
+  .fp-header .icon{width:56px;height:56px;border-radius:50%;background:#fff;color:#12305C;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+  .fp-header h1{font-size:26px;margin:0;letter-spacing:.02em;}
+  .fp-header .sub{font-size:13px;opacity:.85;margin-top:2px;}
+  .fp-cols{display:flex;gap:22px;}
+  .fp-col{flex:1;border-radius:12px;border:2px solid;padding:16px 18px;}
+  .fp-col.pres{border-color:#2E8B4F;}
+  .fp-col.abs{border-color:#C2432B;}
+  .fp-col-head{display:flex;align-items:center;gap:10px;color:#fff;border-radius:8px;padding:8px 14px;margin-bottom:4px;font-weight:700;font-size:15px;}
+  .fp-col.pres .fp-col-head{background:#2E8B4F;}
+  .fp-col.abs .fp-col-head{background:#C2432B;}
+  .fp-col-sub{font-size:11px;color:#666;margin:6px 2px 14px;font-style:italic;}
+  .fp-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #eee;}
+  .fp-row:last-child{border-bottom:none;}
+  .fp-badge{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .fp-label{font-weight:700;font-size:12.5px;letter-spacing:.02em;}
+  .fp-descr{font-size:11.5px;color:#555;margin-top:2px;line-height:1.4;}
+  .fp-footer{margin-top:20px;padding:12px 16px;background:#F5F4F0;border-radius:10px;font-size:10.5px;color:#777;text-align:center;}
+  @media print{ body{padding:8mm;} .fp-cols{page-break-inside:avoid;} }
+</style></head>
+<body>
+  <div class="fp-header">
+    <div class="icon">📅</div>
+    <div>
+      <h1>FICHE PRESTATIONS</h1>
+      <div class="sub">Vos présences, vos absences — générée depuis les types configurés dans l'app</div>
+    </div>
+  </div>
+  <div class="fp-cols">
+    <div class="fp-col pres">
+      <div class="fp-col-head">👤 PRÉSENCES</div>
+      <div class="fp-col-sub">Vous êtes au travail ou contribuez à distance</div>
+      ${presenceRows}
+    </div>
+    <div class="fp-col abs">
+      <div class="fp-col-head">🚫 ABSENCES</div>
+      <div class="fp-col-sub">Vous êtes absent pour un motif reconnu</div>
+      ${absenceRows}
+    </div>
+  </div>
+  <div class="fp-footer">Fiche générée automatiquement à partir des types configurés dans le Carnet de pointage — en cas de doute, contacte le service compétent.</div>
+</body></html>`;
+
+  const win = window.open("", "_blank");
+  if(!win){
+    alert("Le navigateur a bloqué l'ouverture de la fenêtre. Autorise les pop-ups pour ce site, puis réessaie.");
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  const triggerPrint = () => { try{ win.focus(); win.print(); }catch(e){} };
+  win.onload = triggerPrint;
+  setTimeout(triggerPrint, 350);
 }
 
 async function generateReport(){
@@ -2002,6 +2091,7 @@ function renderTypeList(containerId, list, kind){
   el.innerHTML = display.map(t=>`
     <div class="typerow">
       <input type="color" value="${t.color||'#95580B'}" class="type-color" title="Couleur" onchange="editTypeColor('${t.id}','${kind}',this.value)">
+      <input type="text" value="${escapeHtml(t.icon||'')}" maxlength="4" class="type-icon" title="Icône (emoji)" onchange="editTypeIcon('${t.id}','${kind}',this.value)">
       <input type="text" value="${escapeHtml(t.label)}" onchange="editTypeLabel('${kind}','${t.id}',this.value)">
       ${kind==='absence' ? `
         <label><input type="checkbox" ${t.sick?'checked':''} onchange="editTypeFlag('${t.id}','sick',this.checked)"> maladie</label>
@@ -2012,8 +2102,19 @@ function renderTypeList(containerId, list, kind){
       ${kind==='presence' ? `<label><input type="checkbox" ${t.overtimeMode==='daily-target'?'checked':''} onchange="editTypeDailyTarget('${t.id}',this.checked)"> heures sup. sur total journalier</label>` : ""}
       ${kind==='presence' ? `<label><input type="checkbox" ${t.travelLog?'checked':''} onchange="editTypeTravelLog('${t.id}',this.checked)"> trace les déplacements</label>` : ""}
       <button onclick="removeType('${kind}','${t.id}')" title="Supprimer">✕</button>
+      <input type="text" value="${escapeHtml(t.description||'')}" placeholder="Description (fiche de référence)" style="flex-basis:100%;" onchange="editTypeDescription('${t.id}','${kind}',this.value)">
     </div>
   `).join("");
+}
+function editTypeIcon(id, kind, value){
+  const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
+  const t = list.find(x=>x.id===id);
+  if(t) t.icon = value;
+}
+function editTypeDescription(id, kind, value){
+  const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
+  const t = list.find(x=>x.id===id);
+  if(t) t.description = value;
 }
 function editTypeColor(id, kind, value){
   const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
