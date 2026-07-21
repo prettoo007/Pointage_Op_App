@@ -986,8 +986,9 @@ function computeDay(entry){
   const workedMin = morningMin + afternoonBaseMin + overtimeCounted;
   const targetMin = (toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1)) + (otThreshold - toMin(CONFIG.schedule.start2));
   const deltaMin = workedMin - targetMin;
+  const rawMin = Math.max(0, e1 - s1) + Math.max(0, e2 - effStart2); // temps réellement presté (horloge réelle, hors plafonds/multiplicateurs)
 
-  return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold };
+  return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold, rawMin };
 }
 
 function dayTargetMin(){
@@ -1639,7 +1640,7 @@ async function generateReport(){
     const entry = monthData.days[dateStr];
     const isWeekend = dow===0 || dow===6;
     const c = computeDay(entry);
-    let typeLabel, detail = "", boniMali = "";
+    let typeLabel, detail = "", boniMali = "", presteesTxt = "";
     if(isWeekend){
       typeLabel = "Week-end";
     } else if(!entry || !entry.kind){
@@ -1648,10 +1649,12 @@ async function generateReport(){
       typeLabel = labelFor("presence", entry.typeId);
       detail = c.incomplete ? "heures incomplètes" : `${entry.start1||"?"}–${entry.end1||"?"} / ${entry.start2||"?"}–${entry.end2||"?"}`;
       boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin);
+      presteesTxt = c.incomplete ? "—" : fmtDur(c.rawMin);
     } else {
       typeLabel = labelFor("absence", entry.typeId);
       detail = entry.note || (c.sick ? "maladie" : (c.excludeFromOuvres ? "jour non ouvré" : ""));
       boniMali = c.fullDayMali ? fmtDelta(c.deltaMin) : "—";
+      presteesTxt = "—";
     }
     const travelHtml = (entry && entry.kind==="presence" && entry.travel)
       ? `<br><span style="color:#666;font-size:10.5px;">${escapeHtml(formatTravelSummary(entry.travel))}</span>`
@@ -1660,6 +1663,7 @@ async function generateReport(){
       <td>${pad(d)} ${DOW_NAMES[dow]}</td>
       <td>${escapeHtml(typeLabel)}</td>
       <td>${escapeHtml(detail)}${travelHtml}</td>
+      <td style="text-align:right;">${isWeekend ? "" : presteesTxt}</td>
       <td style="text-align:right;font-weight:600;">${boniMali}</td>
     </tr>`;
   }
@@ -1757,7 +1761,13 @@ async function generateReport(){
 
   <h3>Détail journalier</h3>
   <table>
-    <tr><th>Jour</th><th>Type</th><th>Détail</th><th style="text-align:right;">Boni / Mali</th></tr>
+    <tr>
+      <th style="width:9%;">Jour</th>
+      <th style="width:16%;">Type</th>
+      <th>Détail</th>
+      <th style="width:11%;text-align:right;">Prestées</th>
+      <th style="width:11%;text-align:right;">Boni / Mali</th>
+    </tr>
     ${rows}
   </table>
 
