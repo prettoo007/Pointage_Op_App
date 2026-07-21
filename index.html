@@ -1632,13 +1632,13 @@ async function generateReport(){
   ], 120);
 
   const presenceRows = Object.keys(dash.presenceCounts)
-    .map(id=>({label:labelFor("presence",id), n:dash.presenceCounts[id]}))
+    .map(id=>({label:labelFor("presence",id), n:dash.presenceCounts[id], color:typeColorFor("presence",id)}))
     .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   const absenceRows = Object.keys(dash.absenceCounts)
-    .map(id=>({label:labelFor("absence",id), n:dash.absenceCounts[id]}))
+    .map(id=>({label:labelFor("absence",id), n:dash.absenceCounts[id], color:typeColorFor("absence",id)}))
     .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   const listHtml = (list) => list.length
-    ? list.map(r=>`<tr><td>${escapeHtml(r.label)}</td><td style="text-align:right;">${r.n} j.</td></tr>`).join("")
+    ? list.map(r=>`<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${r.color};margin-right:7px;vertical-align:middle;"></span>${escapeHtml(r.label)}</td><td style="text-align:right;">${r.n} j.</td></tr>`).join("")
     : `<tr><td colspan="2" style="color:#999;">—</td></tr>`;
 
   const forfaitLine = summary.moisComplet
