@@ -1073,6 +1073,11 @@ function typeColorFor(kind, id){
   const t = list.find(x=>x.id===id);
   return (t && t.color) || (kind==="presence" ? "#1F7A72" : "#95580B");
 }
+function typeIconFor(kind, id){
+  const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
+  const t = list.find(x=>x.id===id);
+  return (t && t.icon) || "";
+}
 function breakdownBarsHtml(counts, kind){
   const entries = Object.keys(counts).map(id=>({id, label:labelFor(kind,id), n:counts[id], color:typeColorFor(kind,id)}));
   entries.sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
@@ -1632,13 +1637,13 @@ async function generateReport(){
   ], 120);
 
   const presenceRows = Object.keys(dash.presenceCounts)
-    .map(id=>({label:labelFor("presence",id), n:dash.presenceCounts[id], color:typeColorFor("presence",id)}))
+    .map(id=>({label:labelFor("presence",id), n:dash.presenceCounts[id], color:typeColorFor("presence",id), icon:typeIconFor("presence",id)}))
     .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   const absenceRows = Object.keys(dash.absenceCounts)
-    .map(id=>({label:labelFor("absence",id), n:dash.absenceCounts[id], color:typeColorFor("absence",id)}))
+    .map(id=>({label:labelFor("absence",id), n:dash.absenceCounts[id], color:typeColorFor("absence",id), icon:typeIconFor("absence",id)}))
     .sort((a,b)=>a.label.localeCompare(b.label,"fr",{sensitivity:"base"}));
   const listHtml = (list) => list.length
-    ? list.map(r=>`<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${r.color};margin-right:7px;vertical-align:middle;"></span>${escapeHtml(r.label)}</td><td style="text-align:right;">${r.n} j.</td></tr>`).join("")
+    ? list.map(r=>`<tr><td><span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:${r.color}22;border:1.5px solid ${r.color};margin-right:8px;vertical-align:middle;font-size:11px;">${r.icon||""}</span>${escapeHtml(r.label)}</td><td style="text-align:right;">${r.n} j.</td></tr>`).join("")
     : `<tr><td colspan="2" style="color:#999;">—</td></tr>`;
 
   const forfaitLine = summary.moisComplet
