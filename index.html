@@ -154,6 +154,7 @@
   select{min-width:150px;}
   .times{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
   .times .sep{color:var(--text-faint);font-size:11px;}
+  .halfday-off{font-family:var(--mono);font-size:11px;color:var(--text-faint);font-style:italic;margin-right:4px;}
   .times input{width:78px;}
   .break-warn{color:var(--mali);font-size:10.5px;font-family:var(--mono);margin-left:4px;}
   .ot-row{display:flex;align-items:center;gap:5px;margin-top:5px;}
@@ -934,10 +935,19 @@ function computeDay(entry){
     };
   }
   // presence
-  const s1 = toMin(entry.start1), e1 = toMin(entry.end1);
-  const s2 = toMin(entry.start2), e2 = toMin(entry.end2);
-  if(s1==null||e1==null||s2==null||e2==null){
-    return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, incomplete:true };
+  const noMorning = !!entry.noMorning;
+  const noAfternoon = !!entry.noAfternoon;
+  const s1 = noMorning ? null : toMin(entry.start1);
+  const e1 = noMorning ? null : toMin(entry.end1);
+  const s2 = noAfternoon ? null : toMin(entry.start2);
+  const e2 = noAfternoon ? null : toMin(entry.end2);
+
+  if(noMorning && noAfternoon){
+    // aucune prestation ce jour (les deux demi-journées désactivées) : neutre, rien à calculer
+    return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, targetMin:0, rawMin:0, noMorning, noAfternoon };
+  }
+  if((!noMorning && (s1==null||e1==null)) || (!noAfternoon && (s2==null||e2==null))){
+    return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, incomplete:true, noMorning, noAfternoon };
   }
   // migration / valeurs par défaut pour les entrées existantes
   const beforeMode = entry.beforeMode || (entry.before810 ? "simple" : "none");
@@ -947,16 +957,25 @@ function computeDay(entry){
   // ---- mode "total journalier" (ex : Télétravail) : le seuil de dépassement est le total
   // de la journée (7h36), pas des heures d'horloge précises comme 8h10 / 16h16.
   if(presenceTypeDef && presenceTypeDef.overtimeMode === "daily-target"){
-    const minResume = e1 + BREAK_MIN;
-    const breakWarn = (s2 - e1) < BREAK_MIN;
-    const effStart2 = Math.max(s2, minResume);
-    const rawMin = Math.max(0, e1 - s1) + Math.max(0, e2 - effStart2);
-    const targetMin = (toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1)) + (toMin(CONFIG.schedule.end2)-toMin(CONFIG.schedule.start2));
+    const morningTarget = toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1);
+    const afternoonTarget = toMin(CONFIG.schedule.end2)-toMin(CONFIG.schedule.start2);
+    let rawMin = 0, breakWarn = false;
+    if(!noMorning && !noAfternoon){
+      const minResume = e1 + BREAK_MIN;
+      breakWarn = (s2 - e1) < BREAK_MIN;
+      const effStart2 = Math.max(s2, minResume);
+      rawMin = Math.max(0, e1 - s1) + Math.max(0, e2 - effStart2);
+    } else if(!noMorning){
+      rawMin = Math.max(0, e1 - s1);
+    } else if(!noAfternoon){
+      rawMin = Math.max(0, e2 - s2);
+    }
+    const targetMin = (noMorning?0:morningTarget) + (noAfternoon?0:afternoonTarget);
     const excess = Math.max(0, rawMin - targetMin);
     const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
     const workedMin = rawMin > targetMin ? targetMin + excess*otFactor : rawMin;
     const deltaMin = workedMin - targetMin;
-    return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin:excess, targetMin, otMode, dailyTargetMode:true, rawMin };
+    return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin:excess, targetMin, otMode, dailyTargetMode:true, rawMin, noMorning, noAfternoon };
   }
 
   // seuils dynamiques : basés sur l'horaire configuré, avec override éventuel du type de présence
@@ -966,34 +985,48 @@ function computeDay(entry){
     ? toMin(presenceTypeDef.afternoonEndOverride)
     : toMin(CONFIG.schedule.end2);
 
-  const preMin = Math.max(0, dayStartFloor - s1); // minutes avant 8h10, s'il en existe
-  const beforeFactor = beforeMode==="double" ? 2 : (beforeMode==="simple" ? 1 : 0);
-  const morningBaseMin = Math.max(0, e1 - Math.max(s1, dayStartFloor));
-  const morningMin = morningBaseMin + preMin*beforeFactor;
+  let morningMin = 0, preMin = 0, rawMorning = 0;
+  if(!noMorning){
+    preMin = Math.max(0, dayStartFloor - s1); // minutes avant 8h10, s'il en existe
+    const beforeFactor = beforeMode==="double" ? 2 : (beforeMode==="simple" ? 1 : 0);
+    const morningBaseMin = Math.max(0, e1 - Math.max(s1, dayStartFloor));
+    morningMin = morningBaseMin + preMin*beforeFactor;
+    rawMorning = Math.max(0, e1 - s1);
+  }
 
-  // pause obligatoire de 30' : la reprise effective ne peut pas être avant end1+30
-  const minResume = e1 + BREAK_MIN;
-  const breakWarn = (s2 - e1) < BREAK_MIN;
-  const effStart2 = Math.max(s2, minResume);
+  // pause obligatoire de 30' : la reprise effective ne peut pas être avant end1+30 (seulement si les deux demi-journées sont prestées)
+  let breakWarn = false, effStart2 = s2;
+  if(!noMorning && !noAfternoon){
+    const minResume = e1 + BREAK_MIN;
+    breakWarn = (s2 - e1) < BREAK_MIN;
+    effStart2 = Math.max(s2, minResume);
+  }
 
-  const baseEnd2 = Math.min(e2, otThreshold);
-  const afternoonBaseMin = Math.max(0, baseEnd2 - effStart2);
-
-  const overtimeMin = Math.max(0, e2 - otThreshold);
-  const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
-  const overtimeCounted = overtimeMin * otFactor;
+  let afternoonBaseMin = 0, overtimeMin = 0, overtimeCounted = 0, rawAfternoon = 0;
+  if(!noAfternoon){
+    const baseEnd2 = Math.min(e2, otThreshold);
+    afternoonBaseMin = Math.max(0, baseEnd2 - effStart2);
+    overtimeMin = Math.max(0, e2 - otThreshold);
+    const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
+    overtimeCounted = overtimeMin * otFactor;
+    rawAfternoon = Math.max(0, e2 - effStart2);
+  }
 
   const workedMin = morningMin + afternoonBaseMin + overtimeCounted;
-  const targetMin = (toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1)) + (otThreshold - toMin(CONFIG.schedule.start2));
+  const targetMin = (noMorning?0:(toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1))) + (noAfternoon?0:(otThreshold - toMin(CONFIG.schedule.start2)));
   const deltaMin = workedMin - targetMin;
-  const rawMin = Math.max(0, e1 - s1) + Math.max(0, e2 - effStart2); // temps réellement presté (horloge réelle, hors plafonds/multiplicateurs)
+  const rawMin = rawMorning + rawAfternoon; // temps réellement presté (horloge réelle, hors plafonds/multiplicateurs)
 
-  return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold, rawMin };
+  return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold, rawMin, noMorning, noAfternoon };
 }
 
 function dayTargetMin(){
   const s = CONFIG.schedule;
   return (toMin(s.end1)-toMin(s.start1)) + (toMin(s.end2)-toMin(s.start2));
+}
+function dayTargetMinFor(entry){
+  const s = CONFIG.schedule;
+  return (entry.noMorning?0:(toMin(s.end1)-toMin(s.start1))) + (entry.noAfternoon?0:(toMin(s.end2)-toMin(s.start2)));
 }
 
 /* ============================================================
@@ -1250,26 +1283,36 @@ async function render(){
       if(entry && entry.kind==="presence"){
         const typeDef = CONFIG.presenceTypes.find(t=>t.id===entry.typeId);
         const isDailyTarget = !!(typeDef && typeDef.overtimeMode==="daily-target");
+        const motifOptions = (selected) => `<option value="">Motif (facultatif)</option>` +
+          sortedByLabel(CONFIG.absenceTypes).map(a=>`<option value="${a.id}" ${selected===a.id?"selected":""}>${escapeHtml(a.label)}</option>`).join("");
+        const morningTimes = entry.noMorning
+          ? `<span class="halfday-off">— pas de matin</span><select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','noMorningMotif',this.value)">${motifOptions(entry.noMorningMotif)}</select>`
+          : `<input type="time" value="${entry.start1||""}" onchange="updateField('${dateStr}','start1',this.value)"><span class="sep">–</span><input type="time" value="${entry.end1||""}" onchange="updateField('${dateStr}','end1',this.value)">`;
+        const afternoonTimes = entry.noAfternoon
+          ? `<span class="halfday-off">— pas d'après-midi</span><select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','noAfternoonMotif',this.value)">${motifOptions(entry.noAfternoonMotif)}</select>`
+          : `<input type="time" value="${entry.start2||""}" onchange="updateField('${dateStr}','start2',this.value)"><span class="sep">–</span><input type="time" value="${entry.end2||""}" onchange="updateField('${dateStr}','end2',this.value)">`;
         detail = `
           <div class="times">
-            <input type="time" value="${entry.start1||""}" onchange="updateField('${dateStr}','start1',this.value)">
-            <span class="sep">–</span>
-            <input type="time" value="${entry.end1||""}" onchange="updateField('${dateStr}','end1',this.value)">
+            ${morningTimes}
             <span class="sep">&nbsp;/&nbsp;</span>
-            <input type="time" value="${entry.start2||""}" onchange="updateField('${dateStr}','start2',this.value)">
-            <span class="sep">–</span>
-            <input type="time" value="${entry.end2||""}" onchange="updateField('${dateStr}','end2',this.value)">
+            ${afternoonTimes}
             ${c.breakWarn?'<span class="break-warn">⚠ pause &lt; 30\'</span>':""}
           </div>
+          <div class="ot-row">
+            <label><input type="checkbox" ${entry.noMorning?'checked':''} onchange="updateField('${dateStr}','noMorning',this.checked)"> Pas de prestation le matin</label>
+            <label><input type="checkbox" ${entry.noAfternoon?'checked':''} onchange="updateField('${dateStr}','noAfternoon',this.checked)"> Pas de prestation l'après-midi</label>
+          </div>
+          ${(entry.noMorning && entry.noAfternoon) ? `<div class="break-warn">⚠ aucune prestation ce jour — envisage plutôt une absence</div>` : ""}
           ${isDailyTarget ? `
           <div class="ot-row">
-            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Heures sup. (au-delà de 7h36) :</span>
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Heures sup. (au-delà de ${fmtDur(dayTargetMinFor(entry))}) :</span>
             <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','otMode',this.value)">
               <option value="none" ${(entry.otMode||"none")==="none"?"selected":""}>Non comptabilisées (régime normal)</option>
               <option value="simple" ${entry.otMode==="simple"?"selected":""}>Simple (×1)</option>
               <option value="double" ${entry.otMode==="double"?"selected":""}>Double (×2)</option>
             </select>
           </div>` : `
+          ${!entry.noMorning ? `
           <div class="ot-row">
             <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Avant 8h10 :</span>
             <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','beforeMode',this.value)">
@@ -1277,7 +1320,8 @@ async function render(){
               <option value="simple" ${entry.beforeMode==="simple"?"selected":""}>Simple (×1)</option>
               <option value="double" ${entry.beforeMode==="double"?"selected":""}>Double (×2)</option>
             </select>
-          </div>
+          </div>` : ""}
+          ${!entry.noAfternoon ? `
           <div class="ot-row">
             <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Après 16h16 :</span>
             <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','otMode',this.value)">
@@ -1285,7 +1329,7 @@ async function render(){
               <option value="simple" ${entry.otMode==="simple"?"selected":""}>Simple (×1)</option>
               <option value="double" ${entry.otMode==="double"?"selected":""}>Double (×2)</option>
             </select>
-          </div>`}
+          </div>` : ""}`}
           ${typeDef && typeDef.travelLog ? `
           <div class="ot-row">
             <button class="travel-btn${entry.travel?' has-data':''}" onclick="openTravelModal('${dateStr}')">🚗 Déplacement${entry.travel?' ✓':''}</button>
@@ -1483,6 +1527,10 @@ async function changeType(dateStr, value){
     entry.end2   = (existing&&existing.end2)   || CONFIG.schedule.end2;
     entry.beforeMode = existing ? (existing.beforeMode || (existing.before810 ? "simple" : "none")) : "none";
     entry.otMode = existing ? (existing.otMode || (existing.doubleOT ? "double" : "none")) : "none";
+    entry.noMorning = existing ? !!existing.noMorning : false;
+    entry.noAfternoon = existing ? !!existing.noAfternoon : false;
+    entry.noMorningMotif = (existing && existing.noMorningMotif) || "";
+    entry.noAfternoonMotif = (existing && existing.noAfternoonMotif) || "";
   } else {
     entry.note = (existing && existing.note) || "";
   }
@@ -1647,7 +1695,13 @@ async function generateReport(){
       typeLabel = "—"; boniMali = "à renseigner";
     } else if(entry.kind === "presence"){
       typeLabel = labelFor("presence", entry.typeId);
-      detail = c.incomplete ? "heures incomplètes" : `${entry.start1||"?"}–${entry.end1||"?"} / ${entry.start2||"?"}–${entry.end2||"?"}`;
+      const morningTxt = entry.noMorning
+        ? `pas de matin${entry.noMorningMotif?" ("+labelFor("absence",entry.noMorningMotif)+")":""}`
+        : `${entry.start1||"?"}–${entry.end1||"?"}`;
+      const afternoonTxt = entry.noAfternoon
+        ? `pas d'après-midi${entry.noAfternoonMotif?" ("+labelFor("absence",entry.noAfternoonMotif)+")":""}`
+        : `${entry.start2||"?"}–${entry.end2||"?"}`;
+      detail = c.incomplete ? "heures incomplètes" : `${morningTxt} / ${afternoonTxt}`;
       boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin);
       presteesTxt = c.incomplete ? "—" : fmtDur(c.rawMin);
     } else {
