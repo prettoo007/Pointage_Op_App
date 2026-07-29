@@ -943,8 +943,15 @@ function computeDay(entry){
   const e2 = noAfternoon ? null : toMin(entry.end2);
 
   if(noMorning && noAfternoon){
-    // aucune prestation ce jour (les deux demi-journées désactivées) : neutre, rien à calculer
-    return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, targetMin:0, rawMin:0, noMorning, noAfternoon };
+    // aucune prestation ce jour (les deux demi-journées désactivées) : neutre, sauf si un motif "mali plein" est précisé
+    const morningTargetPortion = toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1);
+    const afternoonTargetPortion = toMin(CONFIG.schedule.end2)-toMin(CONFIG.schedule.start2);
+    let deltaMin = 0;
+    const mMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noMorningMotif);
+    const aMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noAfternoonMotif);
+    if(mMotif && mMotif.fullDayMali) deltaMin -= morningTargetPortion;
+    if(aMotif && aMotif.fullDayMali) deltaMin -= afternoonTargetPortion;
+    return { status:"presence", workedMin:0, deltaMin, breakWarn:false, targetMin:0, rawMin:0, noMorning, noAfternoon };
   }
   if((!noMorning && (s1==null||e1==null)) || (!noAfternoon && (s2==null||e2==null))){
     return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, incomplete:true, noMorning, noAfternoon };
@@ -974,7 +981,15 @@ function computeDay(entry){
     const excess = Math.max(0, rawMin - targetMin);
     const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
     const workedMin = rawMin > targetMin ? targetMin + excess*otFactor : rawMin;
-    const deltaMin = workedMin - targetMin;
+    let deltaMin = workedMin - targetMin;
+    if(noMorning){
+      const mMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noMorningMotif);
+      if(mMotif && mMotif.fullDayMali) deltaMin -= morningTarget;
+    }
+    if(noAfternoon){
+      const aMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noAfternoonMotif);
+      if(aMotif && aMotif.fullDayMali) deltaMin -= afternoonTarget;
+    }
     return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin:excess, targetMin, otMode, dailyTargetMode:true, rawMin, noMorning, noAfternoon };
   }
 
@@ -1014,8 +1029,19 @@ function computeDay(entry){
 
   const workedMin = morningMin + afternoonBaseMin + overtimeCounted;
   const targetMin = (noMorning?0:(toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1))) + (noAfternoon?0:(otThreshold - toMin(CONFIG.schedule.start2)));
-  const deltaMin = workedMin - targetMin;
+  let deltaMin = workedMin - targetMin;
   const rawMin = rawMorning + rawAfternoon; // temps réellement presté (horloge réelle, hors plafonds/multiplicateurs)
+
+  // demi-journée non prestée avec un motif "mali plein" (ex : Récupération en heures) : le mali correspond
+  // à la cible de cette demi-journée (l'après-midi tient compte d'un éventuel Niv2/Niv2+)
+  if(noMorning){
+    const mMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noMorningMotif);
+    if(mMotif && mMotif.fullDayMali) deltaMin -= (toMin(CONFIG.schedule.end1)-toMin(CONFIG.schedule.start1));
+  }
+  if(noAfternoon){
+    const aMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noAfternoonMotif);
+    if(aMotif && aMotif.fullDayMali) deltaMin -= (otThreshold - toMin(CONFIG.schedule.start2));
+  }
 
   return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold, rawMin, noMorning, noAfternoon };
 }
@@ -1667,7 +1693,12 @@ async function generateReferenceSheet(){
   win.document.open();
   win.document.write(html);
   win.document.close();
-  const triggerPrint = () => { try{ win.focus(); win.print(); }catch(e){} };
+  let printed = false;
+  const triggerPrint = () => {
+    if(printed) return;
+    printed = true;
+    try{ win.focus(); win.print(); }catch(e){}
+  };
   win.onload = triggerPrint;
   setTimeout(triggerPrint, 350);
 }
@@ -1840,7 +1871,12 @@ async function generateReport(){
   win.document.open();
   win.document.write(html);
   win.document.close();
-  const triggerPrint = () => { try{ win.focus(); win.print(); }catch(e){} };
+  let printed = false;
+  const triggerPrint = () => {
+    if(printed) return;
+    printed = true;
+    try{ win.focus(); win.print(); }catch(e){}
+  };
   win.onload = triggerPrint;
   setTimeout(triggerPrint, 350); // filet de sécurité si onload ne se déclenche pas
 }
