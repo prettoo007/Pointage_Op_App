@@ -727,7 +727,8 @@ function b64DecodeUnicode(str){ return decodeURIComponent(escape(atob(str))); }
 
 async function ghTestConnection(conf){
   const res = await fetch(`https://api.github.com/repos/${conf.owner}/${conf.repo}`, {
-    headers: { "Authorization": `Bearer ${conf.token}`, "Accept":"application/vnd.github+json" }
+    headers: { "Authorization": `Bearer ${conf.token}`, "Accept":"application/vnd.github+json" },
+    cache: "no-store",
   });
   if(res.status===401) throw new Error("Jeton invalide, expiré, ou sans accès à ce dépôt.");
   if(res.status===404) throw new Error("Dépôt introuvable — vérifie le nom d'utilisateur et le nom du dépôt.");
@@ -736,7 +737,7 @@ async function ghTestConnection(conf){
 }
 
 async function ghFetchStore(){
-  const res = await fetch(ghUrl() + `?ref=${GH.branch}`, { headers: ghHeaders() });
+  const res = await fetch(ghUrl() + `?ref=${GH.branch}&_=${Date.now()}`, { headers: ghHeaders(), cache: "no-store" });
   if(res.status === 404){ GH_DATA = {}; GH_SHA = null; return; }
   if(!res.ok) throw new Error(`GitHub GET ${res.status}`);
   const json = await res.json();
@@ -748,7 +749,7 @@ async function ghFetchStore(){
 async function ghPushStore(){
   const body = { message:"Mise à jour horaire", content: b64EncodeUnicode(JSON.stringify(GH_DATA)), branch: GH.branch };
   if(GH_SHA) body.sha = GH_SHA;
-  const res = await fetch(ghUrl(), { method:"PUT", headers: ghHeaders(), body: JSON.stringify(body) });
+  const res = await fetch(ghUrl(), { method:"PUT", headers: ghHeaders(), body: JSON.stringify(body), cache: "no-store" });
   if(!res.ok){ const t = await res.text().catch(()=> ""); throw new Error(`GitHub PUT ${res.status}: ${t}`); }
   const json = await res.json();
   GH_SHA = json.content.sha;
@@ -778,7 +779,7 @@ async function ghFlush(){
   if(GH_SAVING || !GH_DIRTY) return;
   GH_SAVING = true;
   try{
-    const before = await fetch(ghUrl() + `?ref=${GH.branch}`, { headers: ghHeaders() });
+    const before = await fetch(ghUrl() + `?ref=${GH.branch}&_=${Date.now()}`, { headers: ghHeaders(), cache: "no-store" });
     if(before.ok){ const j = await before.json(); GH_SHA = j.sha; }
     else if(before.status===404){ GH_SHA = null; }
     await ghPushStore();
