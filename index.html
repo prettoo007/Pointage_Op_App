@@ -979,16 +979,23 @@ function computeDay(entry){
       rawMin = Math.max(0, e2 - s2);
     }
     const targetMin = (noMorning?0:morningTarget) + (noAfternoon?0:afternoonTarget);
-    const excess = Math.max(0, rawMin - targetMin);
+
+    // si la demi-journée non prestée est couverte par un motif "mali plein" (ex : récupération),
+    // son mali est déjà comptabilisé séparément ci-dessous : le seuil des heures sup. de la
+    // demi-journée travaillée redevient donc la cible complète du jour (7h36), pas la cible réduite
+    const mMotif = noMorning ? CONFIG.absenceTypes.find(t=>t.id===entry.noMorningMotif) : null;
+    const aMotif = noAfternoon ? CONFIG.absenceTypes.find(t=>t.id===entry.noAfternoonMotif) : null;
+    const hasRecupCoverage = !!((mMotif && mMotif.fullDayMali) || (aMotif && aMotif.fullDayMali));
+    const effectiveTarget = hasRecupCoverage ? dayTargetMin() : targetMin;
+
+    const excess = Math.max(0, rawMin - effectiveTarget);
     const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
-    const workedMin = rawMin > targetMin ? targetMin + excess*otFactor : rawMin;
+    const workedMin = rawMin > effectiveTarget ? effectiveTarget + excess*otFactor : rawMin;
     let deltaMin = workedMin - targetMin;
     if(noMorning){
-      const mMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noMorningMotif);
       if(mMotif && mMotif.fullDayMali) deltaMin -= morningTarget;
     }
     if(noAfternoon){
-      const aMotif = CONFIG.absenceTypes.find(t=>t.id===entry.noAfternoonMotif);
       if(aMotif && aMotif.fullDayMali) deltaMin -= afternoonTarget;
     }
     return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin:excess, targetMin, otMode, dailyTargetMode:true, rawMin, noMorning, noAfternoon };
@@ -1003,7 +1010,7 @@ function computeDay(entry){
 
   let morningMin = 0, preMin = 0, rawMorning = 0;
   if(!noMorning){
-    preMin = Math.max(0, dayStartFloor - s1); // minutes avant 8h10, s'il en existe
+    preMin = Math.max(0, Math.min(e1, dayStartFloor) - s1); // minutes avant 8h10 réellement prestées (borné par la fin de la session)
     const beforeFactor = beforeMode==="double" ? 2 : (beforeMode==="simple" ? 1 : 0);
     const morningBaseMin = Math.max(0, e1 - Math.max(s1, dayStartFloor));
     morningMin = morningBaseMin + preMin*beforeFactor;
@@ -1022,7 +1029,7 @@ function computeDay(entry){
   if(!noAfternoon){
     const baseEnd2 = Math.min(e2, otThreshold);
     afternoonBaseMin = Math.max(0, baseEnd2 - effStart2);
-    overtimeMin = Math.max(0, e2 - otThreshold);
+    overtimeMin = Math.max(0, e2 - Math.max(effStart2, otThreshold)); // heures sup. réellement prestées après le seuil (borné par la reprise effective)
     const otFactor = otMode==="double" ? 2 : (otMode==="simple" ? 1 : 0);
     overtimeCounted = overtimeMin * otFactor;
     rawAfternoon = Math.max(0, e2 - effStart2);
