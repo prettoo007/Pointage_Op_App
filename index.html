@@ -186,6 +186,9 @@
   .deltacell.mali{color:var(--mali);}
   .deltacell.zero{color:var(--text-faint);}
   .worked-min{font-family:var(--mono);font-size:11px;color:var(--text-muted);display:block;margin-top:2px;}
+  .delta-edit-btn{background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;margin-left:5px;opacity:.55;vertical-align:middle;}
+  .delta-edit-btn:hover{opacity:1;}
+  .manual-tag{background:var(--mali-dim);border-color:var(--mali);color:var(--mali);}
   .empty-flag{font-family:var(--mono);font-size:10.5px;color:var(--amber);}
   .tag{
     display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;
@@ -920,7 +923,7 @@ function scheduleSave(){
    CALCUL D'UNE JOURNÉE
    ============================================================ */
 // entry = { kind:"presence"|"absence"|"", typeId, start1,end1,start2,end2, doubleOT, note }
-function computeDay(entry){
+function computeDayCore(entry){
   if(!entry || !entry.kind){
     return { status:"empty", workedMin:0, deltaMin:0, breakWarn:false };
   }
@@ -1052,6 +1055,24 @@ function computeDay(entry){
   }
 
   return { status:"presence", workedMin, deltaMin, breakWarn, overtimeMin, preMin, targetMin, beforeMode, otMode, otThreshold, rawMin, noMorning, noAfternoon };
+}
+
+function parseDeltaInput(s){
+  const m = s.trim().match(/^([+-]?)\s*(\d+)\s*h\s*(\d{1,2})?\s*$/i);
+  if(!m) return null;
+  const sign = m[1]==="-" ? -1 : 1;
+  const h = parseInt(m[2],10);
+  const mm = m[3] ? parseInt(m[3],10) : 0;
+  if(mm>59) return null;
+  return sign*(h*60+mm);
+}
+function computeDay(entry){
+  const result = computeDayCore(entry);
+  if(entry && entry.manualDelta !== undefined && entry.manualDelta !== null && entry.manualDelta !== ""){
+    result.deltaMin = Number(entry.manualDelta);
+    result.manualOverride = true;
+  }
+  return result;
 }
 
 function dayTargetMin(){
@@ -1382,23 +1403,27 @@ async function render(){
     }
 
     let deltaCell;
+    const editBtn = `<button class="delta-edit-btn" onclick="editManualDelta('${dateStr}')" title="Modifier manuellement le Boni/Mali">✏️</button>`;
     if(isWeekend){
       deltaCell = "";
     } else if(c.status==="empty"){
       deltaCell = `<td class="deltacell zero empty-flag">à renseigner</td>`;
     } else if(c.status==="absence"){
       let tag = c.sick ? "maladie" : (c.excludeFromOuvres ? "jour non ouvré" : "absence");
-      deltaCell = c.fullDayMali
-        ? `<td class="deltacell mali">${fmtDelta(c.deltaMin)}<span class="worked-min"><span class="tag">${tag}</span></span></td>`
-        : `<td class="deltacell zero"><span class="tag">${tag}</span></td>`;
+      const manualTag = c.manualOverride ? ` <span class="tag manual-tag">manuel</span>` : "";
+      deltaCell = c.fullDayMali || c.manualOverride
+        ? `<td class="deltacell mali">${fmtDelta(c.deltaMin)}${editBtn}<span class="worked-min"><span class="tag">${tag}</span>${manualTag}</span></td>`
+        : `<td class="deltacell zero">${editBtn}<span class="tag">${tag}</span></td>`;
     } else if(c.incomplete){
-      deltaCell = `<td class="deltacell zero empty-flag">heures incomplètes</td>`;
+      deltaCell = `<td class="deltacell zero empty-flag">heures incomplètes${editBtn}</td>`;
     } else {
       const cls = c.deltaMin>0?"boni":(c.deltaMin<0?"mali":"zero");
-      const workedLine = (c.dailyTargetMode && c.rawMin !== c.workedMin)
-        ? `${fmtDur(c.rawMin)} réellement prestées <span style="opacity:.65;">(${fmtDur(c.workedMin)} créditées)</span>`
-        : `${fmtDur(c.workedMin)} prestées`;
-      deltaCell = `<td class="deltacell ${cls}">${fmtDelta(c.deltaMin)}<span class="worked-min">${workedLine}</span></td>`;
+      const workedLine = c.manualOverride
+        ? `<span class="tag manual-tag">valeur saisie manuellement</span>`
+        : (c.dailyTargetMode && c.rawMin !== c.workedMin)
+          ? `${fmtDur(c.rawMin)} réellement prestées <span style="opacity:.65;">(${fmtDur(c.workedMin)} créditées)</span>`
+          : `${fmtDur(c.workedMin)} prestées`;
+      deltaCell = `<td class="deltacell ${cls}">${fmtDelta(c.deltaMin)}${editBtn}<span class="worked-min">${workedLine}</span></td>`;
     }
 
     rows += `<tr class="${rowClass.join(' ')}">
@@ -1580,6 +1605,28 @@ async function updateField(dateStr, field, value){
   await render();
 }
 
+async function editManualDelta(dateStr){
+  const entry = monthData.days[dateStr];
+  if(!entry) return;
+  const hasOverride = entry.manualDelta !== undefined && entry.manualDelta !== null && entry.manualDelta !== "";
+  const current = hasOverride ? fmtDelta(Number(entry.manualDelta)) : "";
+  const val = prompt(
+    `Boni/Mali manuel pour le ${dateStr} (ex: +2h30 ou -1h15).\nLaisse le champ vide et valide pour revenir au calcul automatique.`,
+    current
+  );
+  if(val === null) return; // annulé
+  const trimmed = val.trim();
+  if(trimmed === ""){
+    delete entry.manualDelta;
+  } else {
+    const parsed = parseDeltaInput(trimmed);
+    if(parsed === null){ alert("Format non reconnu. Utilise par exemple +2h30 ou -1h15."); return; }
+    entry.manualDelta = parsed;
+  }
+  scheduleSave();
+  await render();
+}
+
 async function changeMonth(delta){
   let [y,m] = currentMonthKey.split("-").map(Number);
   m += delta;
@@ -1741,12 +1788,12 @@ async function generateReport(){
         ? `pas d'après-midi${entry.noAfternoonMotif?" ("+labelFor("absence",entry.noAfternoonMotif)+")":""}`
         : `${entry.start2||"?"}–${entry.end2||"?"}`;
       detail = c.incomplete ? "heures incomplètes" : `${morningTxt} / ${afternoonTxt}`;
-      boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin);
+      boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin) + (c.manualOverride ? " *" : "");
       presteesTxt = c.incomplete ? "—" : fmtDur(c.rawMin);
     } else {
       typeLabel = labelFor("absence", entry.typeId);
       detail = entry.note || (c.sick ? "maladie" : (c.excludeFromOuvres ? "jour non ouvré" : ""));
-      boniMali = c.fullDayMali ? fmtDelta(c.deltaMin) : "—";
+      boniMali = (c.fullDayMali || c.manualOverride) ? fmtDelta(c.deltaMin) + (c.manualOverride ? " *" : "") : "—";
       presteesTxt = "—";
     }
     const travelHtml = (entry && entry.kind==="presence" && entry.travel)
@@ -1863,6 +1910,7 @@ async function generateReport(){
     </tr>
     ${rows}
   </table>
+  <div style="font-size:9.5px;color:#999;margin-top:6px;">* Valeur de Boni/Mali saisie manuellement (remplace le calcul automatique).</div>
 
   <div class="sig">
     <div>Signature de l'agent</div>
