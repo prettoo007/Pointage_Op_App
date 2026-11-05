@@ -1,4 +1,4 @@
-const CACHE_NAME = "horaire-shell-v1";
+const CACHE_NAME = "horaire-shell-v2"; // bump volontaire : force le nettoyage de l'ancien cache figé
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -29,6 +29,26 @@ self.addEventListener("fetch", (event) => {
   // Les données doivent toujours être fraîches : on ne met jamais en cache l'API GitHub
   if (url.hostname === "api.github.com") return;
 
+  const isDocument = event.request.mode === "navigate" || url.pathname.endsWith("index.html") || url.pathname.endsWith("/");
+
+  if (isDocument) {
+    // Page principale : toujours réseau en premier, pour ne jamais servir une version périmée.
+    // Le cache ne sert qu'en secours si le réseau est indisponible (mode hors-ligne).
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Fichiers statiques (icônes, manifest...) : cache en premier, avec rafraîchissement en arrière-plan.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const network = fetch(event.request)

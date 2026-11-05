@@ -142,6 +142,10 @@
   .daycell{font-family:var(--mono);white-space:nowrap;}
   .daynum{font-weight:600;}
   .dayname{color:var(--text-muted);font-size:11px;}
+  .extra-btn{border:1px solid var(--line);background:var(--bg,#fff);color:var(--teal);border-radius:50%;width:22px;height:22px;line-height:18px;padding:0;font-size:15px;font-weight:700;cursor:pointer;margin-left:6px;vertical-align:middle;}
+  .extra-btn:hover{background:var(--teal);color:#fff;}
+  .extra-undo{color:var(--text-muted);}
+  .extra-tag{font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:1px 6px;white-space:nowrap;}
   .weekend-label{color:var(--text-faint);font-family:var(--mono);font-size:12px;font-style:italic;}
 
   select, input[type=time], input[type=text]{
@@ -1095,10 +1099,17 @@ function computeStatsForMonth(data, key){
 
   for(let d=1; d<=nDays; d++){
     const dow = new Date(y, m-1, d).getDay();
-    if(dow===0 || dow===6) continue; // week-end : jamais un jour ouvré
     const dateStr = `${key}-${pad(d)}`;
     const entry = data.days[dateStr];
     const c = computeDay(entry);
+    if(entry && entry.extra && entry.kind==="presence"){
+      // jour exceptionnellement travaillé (week-end / férié) : son boni/mali compte, mais il n'est PAS un jour ouvré
+      const dx = c.deltaMin || 0;
+      sommeDelta += dx;
+      if(dx>0) boniSum += dx; else if(dx<0) maliSum += -dx;
+      continue;
+    }
+    if(dow===0 || dow===6) continue; // week-end : jamais un jour ouvré
     if(c.status==="absence" && c.excludeFromOuvres){
       // jour férié / dispense de service : exclu des jours ouvrés, n'entre dans aucun calcul
       continue;
@@ -1131,14 +1142,22 @@ function computeDashboardForMonth(data, key){
   const nDays = daysInMonth(y, m-1);
   const presenceCounts = {}; // typeId -> jours
   const absenceCounts = {};  // typeId -> jours
-  let joursPrestes=0, joursNonOuvres=0, joursVides=0, joursAvecHeuresSup=0, totalOvertimeMin=0;
+  let joursPrestes=0, joursNonOuvres=0, joursVides=0, joursAvecHeuresSup=0, totalOvertimeMin=0, joursExtra=0;
 
   for(let d=1; d<=nDays; d++){
     const dow = new Date(y, m-1, d).getDay();
-    if(dow===0 || dow===6) continue;
     const dateStr = `${key}-${pad(d)}`;
     const entry = data.days[dateStr];
     const c = computeDay(entry);
+    if(entry && entry.extra && entry.kind==="presence"){
+      // travail exceptionnel : presté (ticket repas) mais hors base des jours ouvrés
+      joursExtra++;
+      if(entry.origAbsence) joursNonOuvres++;
+      presenceCounts[entry.typeId] = (presenceCounts[entry.typeId]||0) + 1;
+      if((c.beforeMode && c.beforeMode!=="none") || (c.otMode && c.otMode!=="none")) joursAvecHeuresSup++;
+      continue;
+    }
+    if(dow===0 || dow===6) continue;
     if(c.status==="absence" && c.excludeFromOuvres){ joursNonOuvres++; continue; }
     if(c.status==="empty"){ joursVides++; continue; }
     if(c.status==="presence"){
@@ -1150,7 +1169,7 @@ function computeDashboardForMonth(data, key){
       absenceCounts[entry.typeId] = (absenceCounts[entry.typeId]||0) + 1;
     }
   }
-  return { presenceCounts, absenceCounts, joursPrestes, joursNonOuvres, joursVides, joursAvecHeuresSup };
+  return { presenceCounts, absenceCounts, joursPrestes, joursNonOuvres, joursVides, joursAvecHeuresSup, joursExtra };
 }
 function labelFor(kind, typeId){
   const list = kind==="presence" ? CONFIG.presenceTypes : CONFIG.absenceTypes;
@@ -1263,14 +1282,16 @@ async function computeCarryOver(){
 function sortedByLabel(list){
   return [...list].sort((a,b)=>a.label.localeCompare(b.label, "fr", {sensitivity:"base"}));
 }
-function typeOptionsHtml(entry){
+function typeOptionsHtml(entry, presenceOnly){
   const sel = entry ? entry.typeId : "";
-  let html = `<option value="">— Non renseigné —</option>`;
+  let html = presenceOnly ? "" : `<option value="">— Non renseigné —</option>`;
   html += `<optgroup label="Présence">`;
   sortedByLabel(CONFIG.presenceTypes).forEach(t=>{
     html += `<option value="presence:${t.id}" ${entry&&entry.kind==="presence"&&sel===t.id?"selected":""}>${escapeHtml(t.label)}</option>`;
   });
-  html += `</optgroup><optgroup label="Absence">`;
+  html += `</optgroup>`;
+  if(presenceOnly) return html;
+  html += `<optgroup label="Absence">`;
   sortedByLabel(CONFIG.absenceTypes).forEach(t=>{
     html += `<option value="absence:${t.id}" ${entry&&entry.kind==="absence"&&sel===t.id?"selected":""}>${escapeHtml(t.label)}</option>`;
   });
@@ -1298,7 +1319,7 @@ async function render(){
     const dateStr = `${currentMonthKey}-${pad(d)}`;
     const entry = monthData.days[dateStr];
     let s = "empty", style = "";
-    if(dow===0||dow===6) s="weekend";
+    if((dow===0||dow===6) && !(entry && entry.extra)) s="weekend";
     else if(entry && entry.kind==="presence"){
       s="presence";
       const t = CONFIG.presenceTypes.find(x=>x.id===entry.typeId);
@@ -1321,17 +1342,18 @@ async function render(){
     const dateStr = `${currentMonthKey}-${pad(d)}`;
     const entry = monthData.days[dateStr];
     const isWeekend = dow===0||dow===6;
+    const isExtra = !!(entry && entry.extra && entry.kind==="presence");
     const isToday = (new Date().toISOString().slice(0,10) === dateStr);
     const c = computeDay(entry);
 
     let rowClass = [];
-    if(isWeekend) rowClass.push("weekend");
+    if(isWeekend && !isExtra) rowClass.push("weekend");
     if(isToday) rowClass.push("today");
     if(!isWeekend && c.status==="empty") rowClass.push("unfilled");
 
     let bodyCell;
-    if(isWeekend){
-      bodyCell = `<td colspan="3"><span class="weekend-label">Week-end</span></td>`;
+    if(isWeekend && !isExtra){
+      bodyCell = `<td colspan="3"><span class="weekend-label">Week-end</span> <button class="extra-btn" onclick="addExtra('${dateStr}')" title="Travail exceptionnel ce jour-là : saisir un horaire">+</button></td>`;
     } else {
       const kindVal = entry ? `${entry.kind}:${entry.typeId}` : "";
       let detail = "";
@@ -1388,15 +1410,18 @@ async function render(){
           ${typeDef && typeDef.travelLog ? `
           <div class="ot-row">
             <button class="travel-btn${entry.travel?' has-data':''}" onclick="openTravelModal('${dateStr}')">🚗 Déplacement${entry.travel?' ✓':''}</button>
-          </div>` : ""}`;
+          </div>` : ""}
+          ${entry.extra ? `<input type="text" class="note-input" placeholder="Commentaire (facultatif)" value="${escapeHtml(entry.note||"")}" onchange="updateField('${dateStr}','note',this.value)">` : ""}`;
       } else if(entry && entry.kind==="absence"){
-        detail = `<input type="text" class="note-input" placeholder="Note (facultatif)" value="${escapeHtml(entry.note||"")}" onchange="updateField('${dateStr}','note',this.value)">`;
+        detail = `<input type="text" class="note-input" placeholder="Note (facultatif)" value="${escapeHtml(entry.note||"")}" onchange="updateField('${dateStr}','note',this.value)">`
+          + (c.excludeFromOuvres ? ` <button class="extra-btn" onclick="addExtra('${dateStr}')" title="Travail exceptionnel ce jour-là : saisir un horaire">+</button>` : "");
       }
       bodyCell = `
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
             ${entry && entry.kind ? `<span class="bd-swatch" style="width:10px;height:10px;background:${typeColorFor(entry.kind, entry.typeId)};flex-shrink:0;"></span>` : ""}
-            <select onchange="changeType('${dateStr}', this.value)">${typeOptionsHtml(entry)}</select>
+            <select onchange="changeType('${dateStr}', this.value)">${typeOptionsHtml(entry, isExtra)}</select>
+            ${isExtra ? `<span class="extra-tag" title="Jour normalement non ouvré, travaillé exceptionnellement">exceptionnel</span><button class="extra-btn extra-undo" onclick="removeExtra('${dateStr}')" title="Annuler le travail exceptionnel (retour à l'état d'origine)">×</button>` : ""}
           </div>
         </td>
         <td>${detail}</td>`;
@@ -1404,7 +1429,7 @@ async function render(){
 
     let deltaCell;
     const editBtn = `<button class="delta-edit-btn" onclick="editManualDelta('${dateStr}')" title="Modifier manuellement le Boni/Mali">✏️</button>`;
-    if(isWeekend){
+    if(isWeekend && !isExtra){
       deltaCell = "";
     } else if(c.status==="empty"){
       deltaCell = `<td class="deltacell zero empty-flag">à renseigner</td>`;
@@ -1545,7 +1570,8 @@ async function render(){
         <div class="bd-col">
           <div class="bd-title">Ventilation — Présences</div>
           ${breakdownBarsHtml(dash.presenceCounts, "presence")}
-          <div class="bd-ticket-row">🍽️ <span>Ticket repas</span><b>${dash.joursPrestes} j.</b></div>
+          <div class="bd-ticket-row">🍽️ <span>Ticket repas</span><b>${dash.joursPrestes + dash.joursExtra} j.</b></div>
+          ${dash.joursExtra ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">dont ${dash.joursExtra} jour(s) exceptionnel(s) (week-end / férié)</div>` : ""}
         </div>
         <div class="bd-col">
           <div class="bd-title">Ventilation — Absences</div>
@@ -1579,6 +1605,9 @@ async function changeType(dateStr, value){
   const [kind, typeId] = value.split(":");
   const existing = monthData.days[dateStr];
   let entry = { kind, typeId };
+  if(existing && existing.extra && kind === "presence"){
+    entry.extra = true; entry.origAbsence = existing.origAbsence || null; entry.note = existing.note || "";
+  }
   if(kind === "presence"){
     entry.start1 = (existing&&existing.start1) || CONFIG.schedule.start1;
     entry.end1   = (existing&&existing.end1)   || CONFIG.schedule.end1;
@@ -1594,6 +1623,35 @@ async function changeType(dateStr, value){
     entry.note = (existing && existing.note) || "";
   }
   monthData.days[dateStr] = entry;
+  scheduleSave();
+  await render();
+}
+
+/* Travail exceptionnel un week-end / jour férié */
+function newPresenceEntry(typeId){
+  return { kind:"presence", typeId,
+    start1:CONFIG.schedule.start1, end1:CONFIG.schedule.end1, start2:CONFIG.schedule.start2, end2:CONFIG.schedule.end2,
+    beforeMode:"none", otMode:"none", noMorning:false, noAfternoon:false, noMorningMotif:"", noAfternoonMotif:"" };
+}
+async function addExtra(dateStr){
+  const existing = monthData.days[dateStr];
+  const entry = newPresenceEntry("cpm");
+  entry.extra = true;
+  entry.origAbsence = (existing && existing.kind==="absence") ? { typeId: existing.typeId, note: existing.note || "" } : null;
+  entry.note = entry.origAbsence ? entry.origAbsence.note : "";
+  monthData.days[dateStr] = entry;
+  scheduleSave();
+  await render();
+}
+async function removeExtra(dateStr){
+  const entry = monthData.days[dateStr];
+  if(!entry || !entry.extra) return;
+  if(!confirm(`Annuler le travail exceptionnel du ${dateStr} ? L'horaire saisi sera supprimé.`)) return;
+  if(entry.origAbsence){
+    monthData.days[dateStr] = { kind:"absence", typeId: entry.origAbsence.typeId, note: entry.origAbsence.note || "" };
+  } else {
+    delete monthData.days[dateStr];
+  }
   scheduleSave();
   await render();
 }
@@ -1772,7 +1830,8 @@ async function generateReport(){
     const dow = new Date(y, m-1, d).getDay();
     const dateStr = `${currentMonthKey}-${pad(d)}`;
     const entry = monthData.days[dateStr];
-    const isWeekend = dow===0 || dow===6;
+    const isExtraDay = !!(entry && entry.extra && entry.kind==="presence");
+    const isWeekend = (dow===0 || dow===6) && !isExtraDay;
     const c = computeDay(entry);
     let typeLabel, detail = "", boniMali = "", presteesTxt = "";
     if(isWeekend){
@@ -1780,7 +1839,7 @@ async function generateReport(){
     } else if(!entry || !entry.kind){
       typeLabel = "—"; boniMali = "à renseigner";
     } else if(entry.kind === "presence"){
-      typeLabel = labelFor("presence", entry.typeId);
+      typeLabel = labelFor("presence", entry.typeId) + (entry.extra ? " (exceptionnel)" : "");
       const morningTxt = entry.noMorning
         ? `pas de matin${entry.noMorningMotif?" ("+labelFor("absence",entry.noMorningMotif)+")":""}`
         : `${entry.start1||"?"}–${entry.end1||"?"}`;
@@ -1788,6 +1847,7 @@ async function generateReport(){
         ? `pas d'après-midi${entry.noAfternoonMotif?" ("+labelFor("absence",entry.noAfternoonMotif)+")":""}`
         : `${entry.start2||"?"}–${entry.end2||"?"}`;
       detail = c.incomplete ? "heures incomplètes" : `${morningTxt} / ${afternoonTxt}`;
+      if(entry.extra && entry.note) detail += ` — ${entry.note}`;
       boniMali = c.incomplete ? "—" : fmtDelta(c.deltaMin) + (c.manualOverride ? " *" : "");
       presteesTxt = c.incomplete ? "—" : fmtDur(c.rawMin);
     } else {
@@ -1892,7 +1952,7 @@ async function generateReport(){
       <h4>Présences</h4>
       <table>${listHtml(presenceRows)}</table>
       <div style="margin-top:8px;padding:8px 10px;background:#E4F5E9;border:1px solid #2E8B4F;border-radius:6px;font-size:12px;display:flex;justify-content:space-between;">
-        <span>🍽️ Ticket repas</span><b>${dash.joursPrestes} j.</b>
+        <span>🍽️ Ticket repas</span><b>${dash.joursPrestes + dash.joursExtra} j.</b>
       </div>
     </div>
     <div><h4>Absences</h4><table>${listHtml(absenceRows)}</table></div>
