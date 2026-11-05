@@ -964,6 +964,15 @@ function computeDayCore(entry){
   if((!noMorning && (s1==null||e1==null)) || (!noAfternoon && (s2==null||e2==null))){
     return { status:"presence", workedMin:0, deltaMin:0, breakWarn:false, incomplete:true, noMorning, noAfternoon };
   }
+  // ---- jour exceptionnellement travaillé (week-end / férié) : pas de cible, pas de seuils, pas de pause forcée.
+  // Temps presté = (fin matin − début matin) + (fin après-midi − début après-midi), compté ×1 ou ×2 (case à cocher).
+  // La pause de midi n'est donc jamais comptée (c'est l'écart réel entre les deux plages, pas forcément 30').
+  if(entry.extra){
+    const rawX = (noMorning?0:Math.max(0,e1-s1)) + (noAfternoon?0:Math.max(0,e2-s2));
+    const fx = entry.extraDouble ? 2 : 1;
+    return { status:"presence", workedMin:rawX*fx, deltaMin:rawX*fx, breakWarn:false, targetMin:0, rawMin:rawX,
+             dailyTargetMode:true, extraMode:true, extraDouble:!!entry.extraDouble, noMorning, noAfternoon };
+  }
   // migration / valeurs par défaut pour les entrées existantes
   const beforeMode = entry.beforeMode || (entry.before810 ? "simple" : "none");
   const otMode = entry.otMode || (entry.doubleOT ? "double" : "none");
@@ -1380,7 +1389,11 @@ async function render(){
             <label><input type="checkbox" ${entry.noAfternoon?'checked':''} onchange="updateField('${dateStr}','noAfternoon',this.checked)"> Pas de prestation l'après-midi</label>
           </div>
           ${(entry.noMorning && entry.noAfternoon) ? `<div class="break-warn">⚠ aucune prestation ce jour — envisage plutôt une absence</div>` : ""}
-          ${isDailyTarget ? `
+          ${entry.extra ? `
+          <div class="ot-row">
+            <label><input type="checkbox" ${entry.extraDouble?'checked':''} onchange="updateField('${dateStr}','extraDouble',this.checked)"> Compter à double (×2)</label>
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);">Total (fin − début), pause de midi non comptée — simple (×1) par défaut</span>
+          </div>` : isDailyTarget ? `
           <div class="ot-row">
             <span style="font-family:var(--mono);font-size:10.5px;color:var(--text-muted);white-space:nowrap;">Heures sup. (au-delà de ${fmtDur(dayTargetMinFor(entry))}) :</span>
             <select style="min-width:0;font-size:11px;padding:3px 5px;" onchange="updateField('${dateStr}','otMode',this.value)">
@@ -1606,7 +1619,7 @@ async function changeType(dateStr, value){
   const existing = monthData.days[dateStr];
   let entry = { kind, typeId };
   if(existing && existing.extra && kind === "presence"){
-    entry.extra = true; entry.origAbsence = existing.origAbsence || null; entry.note = existing.note || "";
+    entry.extra = true; entry.extraDouble = !!existing.extraDouble; entry.origAbsence = existing.origAbsence || null; entry.note = existing.note || "";
   }
   if(kind === "presence"){
     entry.start1 = (existing&&existing.start1) || CONFIG.schedule.start1;
